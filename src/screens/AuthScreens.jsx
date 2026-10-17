@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { actions } from '../lib/store'
 
+// Google sign-in needs an OAuth app in Google Cloud; turn it on with VITE_ENABLE_GOOGLE=true once set up.
+const googleEnabled = import.meta.env.VITE_ENABLE_GOOGLE === 'true'
+
 export function LoginScreen() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
@@ -17,13 +20,13 @@ export function LoginScreen() {
     <div className="center">
       <h1>רשימת קניות משותפת</h1>
       <span className="sub">רשימה אחת לשניכם, מתעדכנת בזמן אמת בשני הטלפונים.</span>
-      <button className="btn primary big" onClick={actions.signInWithGoogle}>כניסה עם Google</button>
+      {googleEnabled && <button className="btn primary big" onClick={actions.signInWithGoogle}>כניסה עם Google</button>}
       <form className="form" style={{ margin: 0 }} onSubmit={sendLink}>
         <label className="field">
-          <span>או קבלו קישור כניסה למייל</span>
+          <span>{googleEnabled ? 'או קבלו קישור כניסה למייל' : 'כניסה עם קישור למייל'}</span>
           <input className="input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" />
         </label>
-        <button className="btn" type="submit">שלחו לי קישור</button>
+        <button className={`btn ${googleEnabled ? '' : 'primary'}`} type="submit">שלחו לי קישור</button>
         {sent && <span className="sub">נשלח. פתחו את המייל בטלפון הזה ולחצו על הקישור.</span>}
         {error && <span className="sub" style={{ color: 'var(--warn)' }}>{error}</span>}
       </form>
