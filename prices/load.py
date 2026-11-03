@@ -18,6 +18,14 @@ CHAINS = [
     "SUPER_YUDA", "CITY_MARKET_SHOPS", "SHUK_AHIR", "NETIV_HASED",
 ]
 ONLINE = re.compile(r"אונליין|online|אינטרנט|משלוח|ליקוט|דיגיטל|b-?klick|pick", re.I)
+# Online stores in the price files (StoreType 2) that deliver to the Tel Aviv area, with the
+# delivery fees published by the chains (checked 2026-11-03; see README).
+ONLINE_STORES = {
+    "7290027600007-413": {"label": "שופרסל אונליין", "delivery_fee": 35.90, "min_order": None, "fee_note": None},
+    "7290058140886-39": {"label": "רמי לוי אונליין", "delivery_fee": 35.90, "min_order": None, "fee_note": None},
+    "7290873255550-519": {"label": "טיב טעם B-Klick", "delivery_fee": None, "min_order": 300,
+                          "fee_note": "דמי המשלוח מוצגים רק בסל באתר"},
+}
 MAX_RADIUS_KM = 20
 MAX_STORES_PER_HOME = 40
 UA = "shopping-list-price-loader (+https://github.com/shayh20-cmd/shopping-list)"
@@ -369,7 +377,10 @@ def main():
                       key=lambda x: x[0])
         for d, s in [x for x in near if x[0] <= h["radius"]][:MAX_STORES_PER_HOME]:
             chosen[s["key"]] = (d, s)
-    log(f"stores in range: {len(chosen)}")
+    for k in ONLINE_STORES:
+        if k in stores:
+            chosen[k] = (0, stores[k])
+    log(f"stores in range (with online): {len(chosen)}")
     for d, s in sorted(chosen.values(), key=lambda x: x[0]):
         log(f"  {d:5.1f} km{' ~' if s.get('approx') else '  '} {s['chain_name']} {s['name']} | {s['address']} {s.get('city_name', '')}")
 
@@ -378,6 +389,12 @@ def main():
                 | {"geocoded": bool(s.get("geocoded")), "approx": bool(s.get("approx"))}
                 | {"city": s.get("city_name") or s["city"]} for s in stores.values()]
         db.upsert("chain_stores", rows, "key")
+        online = [{"store_key": k, **v} for k, v in ONLINE_STORES.items() if k in stores]
+        try:
+            db.delete("chain_online", {"store_key": "not.is.null"})
+            db.upsert("chain_online", online, "store_key")
+        except RuntimeError as e:
+            log("online stores not saved (run supabase/online.sql):", e)
         if geo.new:
             db.upsert("geo_cache", [{"query": q, "lat": v and v[0], "lng": v and v[1]} for q, v in geo.new.items()], "query")
 
