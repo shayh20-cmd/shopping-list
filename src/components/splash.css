@@ -1,0 +1,50 @@
+/* BASKET launch screen. Terracotta ground, cream line art. */
+.splash {
+  --sp-bg: #b0502e;
+  --sp-ink: #f6efe4;
+  position: fixed; inset: 0; z-index: 100;
+  background: var(--sp-bg); color: var(--sp-ink);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding-bottom: 8vh;
+  font-family: 'Rubik', 'Heebo', system-ui, sans-serif;
+  transition: opacity .45s ease;
+}
+.splash.out { opacity: 0; pointer-events: none; }
+
+.splash-art { position: relative; width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; }
+.splash-art > svg:first-of-type { position: relative; }
+.splash-halo {
+  position: absolute; inset: 0; border-radius: 50%; background: rgba(246, 239, 228, .08);
+  opacity: 0; transform: scale(.7); animation: sp-halo 1s cubic-bezier(.3, 1.2, .5, 1) .1s forwards;
+}
+.sp-star { position: absolute; }
+.sp-star.big { top: 22px; left: 30px; width: 22px; height: 22px; }
+.sp-star.small { top: 58px; left: 12px; width: 12px; height: 12px; }
+
+.splash-name {
+  margin: 28px 0 0; padding-left: 8px; direction: ltr;
+  font-size: 60px; font-weight: 800; letter-spacing: 8px; line-height: 1;
+}
+.splash-motto { margin: 16px 0 0; direction: ltr; font-size: 17px; font-weight: 400; letter-spacing: .4px; }
+.splash-motto b { font-weight: 700; }
+
+.sp-draw path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: sp-draw 1s cubic-bezier(.6, .1, .3, 1) var(--d, 0s) forwards; }
+.sp-drop { opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; animation: sp-drop .7s cubic-bezier(.3, 1.5, .5, 1) var(--d, 0s) forwards; }
+.sp-ltr { display: inline-block; opacity: 0; animation: sp-rise .6s cubic-bezier(.2, 1.3, .4, 1) var(--d, 0s) forwards; }
+.sp-fade { opacity: 0; animation: sp-fade .7s ease var(--d, 0s) forwards; }
+.sp-star {
+  opacity: 0; transform-box: fill-box; transform-origin: center;
+  animation: sp-pop .5s cubic-bezier(.3, 1.6, .5, 1) var(--d, 0s) forwards, sp-twinkle 3.2s ease-in-out calc(var(--d, 0s) + .5s) infinite;
+}
+
+@keyframes sp-draw { to { stroke-dashoffset: 0; } }
+@keyframes sp-drop { from { opacity: 0; transform: translateY(-36px) rotate(-6deg); } to { opacity: 1; transform: none; } }
+@keyframes sp-rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+@keyframes sp-fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes sp-halo { to { opacity: 1; transform: scale(1); } }
+@keyframes sp-pop { from { opacity: 0; transform: scale(0) rotate(-45deg); } to { opacity: 1; transform: none; } }
+@keyframes sp-twinkle { 0%, 100% { scale: 1; } 50% { scale: .75; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-draw path, .sp-drop, .sp-ltr, .sp-fade, .sp-star, .splash-halo { animation: none !important; opacity: 1; stroke-dashoffset: 0; transform: none; }
+}
