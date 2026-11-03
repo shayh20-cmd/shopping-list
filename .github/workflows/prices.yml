@@ -1,0 +1,34 @@
+name: Load store prices
+on:
+  schedule:
+    - cron: '30 4 * * *'   # every morning, after the chains publish their full price files
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print what would be loaded, without Supabase
+        type: boolean
+        default: false
+      home:
+        description: LAT,LNG for a dry run
+        default: '32.0853,34.7818'
+      radius:
+        description: Radius in km for a dry run
+        default: '3'
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install il-supermarket-scraper==1.0.19
+      - name: Dry run
+        if: ${{ inputs.dry_run }}
+        run: python prices/load.py --dry-run --home "${{ inputs.home }}" --radius "${{ inputs.radius }}"
+      - name: Load
+        if: ${{ !inputs.dry_run }}
+        env:
+          SUPABASE_URL: https://tnfmdelmjlduouaqzqct.supabase.co
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python prices/load.py
