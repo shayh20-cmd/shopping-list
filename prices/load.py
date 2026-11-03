@@ -221,8 +221,16 @@ def clean_city(c):
 def city_of(store, codes):
     c = store["city"].strip()
     if c.isdigit():
-        return codes.get(c.lstrip("0"), "") if c.strip("0") else ""
-    return c
+        c = codes.get(c.lstrip("0"), "") if c.strip("0") else ""
+    if c:
+        return c
+    # No city in the file: look for a known city name in the branch name or address.
+    text = f" {norm(store['name'])} {norm(store['address'])} "
+    names = sorted({clean_city(n) for n in codes.values() if len(n) >= 3} | {"תל אביב"}, key=len, reverse=True)
+    for n in names:
+        if f" {norm(n)} " in text:
+            return n
+    return ""
 
 
 def locate(stores, homes, geo, codes):
@@ -243,13 +251,7 @@ def locate(stores, homes, geo, codes):
                 p = geo(f"{street}, {clean_city(city)}")
             s["approx"] = not p
         else:
-            # No city in the file: try the address and the branch name.
-            p = geo(f"{s['address']}, ישראל") if s["address"] else None
-            if not p and s["name"]:
-                p = geo(f"{s['name']}, ישראל")
-            if p and min(km(p, h["home"]) for h in homes) > h_radius(homes):
-                p = None
-            c = None
+            continue  # without a city a geocode is a guess; leave the store out
         if not p:
             s["approx"] = True
         p = p or c
@@ -347,7 +349,7 @@ def main():
     stores = parse_stores(paths)
     for k, s in stores.items():
         old = known.get(k)
-        if old and old.get("lat") is not None and old.get("address") == s["address"]:
+        if old and old.get("lat") is not None and old.get("address") == s["address"] and not old.get("city", "").strip("0123456789 ") == "":
             s["lat"], s["lng"], s["geocoded"], s["approx"] = old["lat"], old["lng"], True, old.get("approx")
     geo = Geocoder(cache)
     locate(stores, homes, geo, city_names())
