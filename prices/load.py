@@ -17,6 +17,7 @@ CHAINS = [
     "STOP_MARKET", "FRESH_MARKET_AND_SUPER_DOSH", "KING_STORE", "ZOL_VEBEGADOL",
     "SUPER_YUDA", "CITY_MARKET_SHOPS", "SHUK_AHIR", "NETIV_HASED",
 ]
+ONLINE = re.compile(r"אונליין|online|אינטרנט|משלוח|ליקוט|דיגיטל|b-?klick|pick", re.I)
 MAX_RADIUS_KM = 20
 MAX_STORES_PER_HOME = 40
 UA = "shopping-list-price-loader (+https://github.com/shayh20-cmd/shopping-list)"
@@ -121,7 +122,7 @@ def parse_stores(paths):
                 "key": f"{chain_id}-{sid}", "chain_id": chain_id,
                 "chain_name": f.get("chainname") or chain_name or chain_id,
                 "store_id": sid, "name": name, "address": f.get("address", ""),
-                "city": f.get("city", ""),
+                "city": f.get("city", ""), "type": f.get("storetype", ""),
             }
         log(f"stores: {chain_name or chain_id}: {sum(1 for s in stores.values() if s['chain_id'] == chain_id)}")
     return stores
@@ -321,6 +322,7 @@ def main():
     ap.add_argument("--home", help="LAT,LNG for --dry-run")
     ap.add_argument("--radius", type=float, default=5)
     ap.add_argument("--chains", default=",".join(CHAINS))
+    ap.add_argument("--list-online", action="store_true", help="print online-looking stores and exit")
     args = ap.parse_args()
     chains = args.chains.split(",")
 
@@ -352,6 +354,12 @@ def main():
         if old and old.get("lat") is not None and old.get("address") == s["address"] and not old.get("city", "").strip("0123456789 ") == "":
             s["lat"], s["lng"], s["geocoded"], s["approx"] = old["lat"], old["lng"], True, old.get("approx")
     geo = Geocoder(cache)
+    if args.list_online:
+        for st in stores.values():
+            if st["type"] != "1" or ONLINE.search(st["name"] + " " + st["address"]):
+                log(f"online? type={st['type']} {st['key']} {st['chain_name']} | {st['name']} | {st['address']} | {st['city']}")
+        log("types:", collections.Counter((s_["chain_name"], s_["type"]) for s_ in stores.values()))
+        return
     locate(stores, homes, geo, city_names())
 
     # 2. Nearest stores per home.
