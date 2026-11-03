@@ -27,7 +27,7 @@ function StoreCard({ store, best, open, onToggle }) {
       <div className="row-meta" style={{ marginTop: 4 }}>
         {best && <span className="badge">הכי זול</span>}
         {store.missing > 0 && <span className="badge warn">חסרים {store.missing}</span>}
-        <span>{store.distance_km.toFixed(1)} ק"מ</span>
+        <span>{store.approx ? 'באזור העיר' : `${store.distance_km.toFixed(1)} ק"מ`}</span>
         {store.address && <span>{store.address}{store.city ? `, ${store.city}` : ''}</span>}
       </div>
       {open && (
