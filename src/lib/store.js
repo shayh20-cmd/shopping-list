@@ -5,7 +5,7 @@ import { seedProducts, OTHER } from '../data/catalog'
 
 const STATE_KEY = 'shopping-state-v1'
 const QUEUE_KEY = 'shopping-queue-v1'
-const PERSISTED = ['household', 'members', 'products', 'lists', 'items', 'activeListId']
+const PERSISTED = ['household', 'members', 'products', 'lists', 'items', 'activeListId', 'settings']
 const TABLE_KEY = { products: 'products', lists: 'lists', list_items: 'items' }
 
 function readJSON(key, fallback) {
@@ -34,6 +34,8 @@ const empty = {
   lists: [],
   items: [],
   activeListId: null,
+  // Per-device preferences: home location and search radius for the store comparison.
+  settings: { radiusKm: 5, home: null },
   online: typeof navigator === 'undefined' ? true : navigator.onLine,
   pending: 0,
   error: null,
@@ -196,19 +198,9 @@ export const actions = {
     return row
   },
 
-  createList({ name, kind = 'grocery', tag = '' }) {
-    const row = { id: uuid(), household_id: state.household.id, name: name.trim(), kind, tag: tag.trim(), created_at: now() }
-    upsertLocal('lists', [row])
-    enqueue({ table: 'lists', type: 'insert', rows: [row] })
-    setState({ activeListId: row.id })
-    return row
-  },
 
-  deleteList(id) {
-    removeLocal('lists', [id])
-    removeLocal('list_items', state.items.filter((i) => i.list_id === id).map((i) => i.id))
-    enqueue({ table: 'lists', type: 'delete', ids: [id] })
-    if (state.activeListId === id) setState({ activeListId: state.lists[0]?.id ?? null })
+  setSettings(patch) {
+    setState({ settings: { ...state.settings, ...patch } })
   },
 
   clearError() {
@@ -276,7 +268,12 @@ async function refresh() {
     supabase.from('household_members').select('user_id, display_name').eq('household_id', hh.id),
   ])
   if (p.error || l.error || i.error || m.error) return
-  const lists = l.data
+  let lists = l.data
+  if (!lists.some((x) => x.kind === 'grocery')) {
+    const row = { id: uuid(), household_id: hh.id, name: 'רשימת קניות', kind: 'grocery', tag: '', created_at: now() }
+    lists = [...lists, row]
+    enqueue({ table: 'lists', type: 'insert', rows: [row] })
+  }
   const activeListId = lists.some((x) => x.id === state.activeListId) ? state.activeListId : lists[0]?.id ?? null
   setState({ products: p.data, lists, items: i.data, members: m.data, activeListId })
 }

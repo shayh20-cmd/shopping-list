@@ -5,14 +5,14 @@ import Icon from './components/Icon'
 import ListScreen from './screens/ListScreen'
 import CatalogScreen from './screens/CatalogScreen'
 import ShopScreen from './screens/ShopScreen'
-import ListsScreen from './screens/ListsScreen'
+import SettingsScreen from './screens/SettingsScreen'
 import { LoginScreen, SetupScreen } from './screens/AuthScreens'
 
 const TABS = [
   { key: 'list', label: 'רשימה', icon: 'list' },
   { key: 'catalog', label: 'קטלוג', icon: 'catalog' },
   { key: 'shop', label: 'קנייה', icon: 'shop' },
-  { key: 'lists', label: 'כל הרשימות', icon: 'lists' },
+  { key: 'settings', label: 'הגדרות', icon: 'settings' },
 ]
 
 export default function App() {
@@ -24,7 +24,7 @@ export default function App() {
   if (isConfigured && s.ready && !s.household) return <div className="app" dir="rtl"><SetupScreen /></div>
   if (!s.household) return <div className="app" dir="rtl" />
 
-  const list = s.lists.find((l) => l.id === s.activeListId) ?? s.lists[0] ?? null
+  const list = s.lists.find((l) => l.kind === 'grocery') ?? s.lists[0] ?? null
   const go = (t) => setTab(t)
 
   return (
@@ -39,7 +39,7 @@ export default function App() {
         {tab === 'list' && <ListScreen list={list} go={go} />}
         {tab === 'catalog' && <CatalogScreen list={list} />}
         {tab === 'shop' && <ShopScreen list={list} go={go} />}
-        {tab === 'lists' && <ListsScreen go={go} />}
+        {tab === 'settings' && <SettingsScreen />}
       </main>
       <nav className="tabs" aria-label="ניווט ראשי">
         {TABS.map((t) => (

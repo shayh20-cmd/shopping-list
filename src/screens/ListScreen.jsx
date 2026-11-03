@@ -113,7 +113,7 @@ export function QuickAdd({ list }) {
 
 export default function ListScreen({ list, go }) {
   const { items } = useStore()
-  if (!list) return <div className="empty">אין רשימות עדיין. צרו אחת במסך "כל הרשימות".</div>
+  if (!list) return <div className="empty">הרשימה נטענת…</div>
   const mine = items.filter((i) => i.list_id === list.id)
   const groups = list.kind === 'grocery' ? groupByCategory(mine) : [['', [...mine].sort((a, b) => a.created_at.localeCompare(b.created_at))]]
 

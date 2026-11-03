@@ -8,7 +8,7 @@ export default function CatalogScreen({ list }) {
   const [sort, setSort] = useState('cat')
   const [newCat, setNewCat] = useState(OTHER)
 
-  if (!list) return <div className="empty">צרו קודם רשימה במסך "כל הרשימות".</div>
+  if (!list) return <div className="empty">הרשימה נטענת…</div>
 
   const query = q.trim()
   const inList = new Map(items.filter((i) => i.list_id === list.id && !i.checked).map((i) => [i.product_id, i]))
