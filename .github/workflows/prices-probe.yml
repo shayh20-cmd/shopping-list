@@ -1,0 +1,20 @@
+name: Prices probe
+on:
+  workflow_dispatch:
+    inputs:
+      chains:
+        description: Comma separated scraper names
+        default: SHUFERSAL,RAMI_LEVY,YOHANANOF,OSHER_AD,VICTORY_NEW_SOURCE,TIV_TAAM,HAZI_HINAM,YAYNO_BITAN_AND_CARREFOUR,MAHSANI_ASHUK_NEW_SOURCE,KESHET,STOP_MARKET,FRESH_MARKET_AND_SUPER_DOSH,KING_STORE,ZOL_VEBEGADOL,SUPER_YUDA,CITY_MARKET_SHOPS,NETIV_HASED,SHUK_AHIR
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install il-supermarket-scraper==1.0.19
+      - run: python prices/probe.py "${{ inputs.chains }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: dumps, path: dumps, retention-days: 3 }
