@@ -7,6 +7,7 @@ import CatalogScreen from './screens/CatalogScreen'
 import ShopScreen from './screens/ShopScreen'
 import SettingsScreen from './screens/SettingsScreen'
 import CompareScreen from './screens/CompareScreen'
+import PurchasesScreen from './screens/PurchasesScreen'
 import { LoginScreen, SetupScreen } from './screens/AuthScreens'
 
 const TABS = [
@@ -28,6 +29,7 @@ export default function App() {
 
   const list = s.lists.find((l) => l.kind === 'grocery') ?? s.lists[0] ?? null
   const go = (t) => setTab(t)
+  const active = tab === 'purchases' ? 'shop' : tab
 
   return (
     <div className="app" dir="rtl">
@@ -43,10 +45,11 @@ export default function App() {
         {tab === 'shop' && <ShopScreen list={list} go={go} />}
         {tab === 'compare' && <CompareScreen list={list} go={go} />}
         {tab === 'settings' && <SettingsScreen />}
+        {tab === 'purchases' && <PurchasesScreen go={go} />}
       </main>
       <nav className="tabs" aria-label="ניווט ראשי">
         {TABS.map((t) => (
-          <button key={t.key} className={`tab ${tab === t.key ? 'on' : ''}`} aria-current={tab === t.key ? 'page' : undefined}
+          <button key={t.key} className={`tab ${active === t.key ? 'on' : ''}`} aria-current={active === t.key ? 'page' : undefined}
             onClick={() => setTab(t.key)}>
             <span className="tab-icon"><Icon name={t.icon} /></span>
             <span>{t.label}</span>
