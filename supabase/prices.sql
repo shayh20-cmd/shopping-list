@@ -25,6 +25,7 @@ create table if not exists chain_stores (
   lat double precision,
   lng double precision,
   geocoded boolean not null default false,
+  approx boolean not null default false,  -- located by city only
   updated_at timestamptz not null default now()
 );
 
@@ -81,7 +82,7 @@ $$;
 -- One row per store item on the household's shopping list, for every store in range.
 create or replace function basket_lines(hh uuid)
 returns table (
-  store_key text, chain_name text, store_name text, address text, city text, distance_km double precision,
+  store_key text, chain_name text, store_name text, address text, city text, distance_km double precision, approx boolean,
   item_id uuid, item_name text, qty int, price numeric, matched_name text, exact boolean
 ) language sql stable as $$
   with h as (
@@ -97,7 +98,7 @@ returns table (
     left join products p on p.id = li.product_id
     where li.household_id = hh and not li.checked
   )
-  select s.key, s.chain_name, s.name, s.address, s.city, s.dist,
+  select s.key, s.chain_name, s.name, s.address, s.city, s.dist, s.approx,
          i.id, i.name, i.qty,
          coalesce(sp.price, g.price),
          case when sp.price is not null then ci.name else g.item_name end,

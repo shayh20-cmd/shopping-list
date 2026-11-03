@@ -145,6 +145,7 @@ def parse_prices(path):
             "barcode": code, "name": " ".join(name.split()), "price": round(price, 2),
             "manufacturer": f.get("manufacturername") or f.get("manufacturename", ""),
             "quantity": f.get("quantity", ""), "unit": f.get("unitofmeasure", ""),
+            "weighted": f.get("bisweighted") == "1",
         })
     return items
 
@@ -180,7 +181,7 @@ class Geocoder:
         self.new = {}
         self.last = 0
 
-    def __call__(self, q):
+    def __call__(self, q, street=None, city=None):
         if q in self.cache:
             return self.cache[q]
         wait = 1.1 - (time.time() - self.last)
@@ -188,9 +189,10 @@ class Geocoder:
             time.sleep(wait)
         self.last = time.time()
         res = None
+        params = {"street": street, "city": city} if street else {"q": q}
         try:
             r = requests.get("https://nominatim.openstreetmap.org/search",
-                             params={"q": q, "format": "json", "limit": 1, "countrycodes": "il"},
+                             params={**params, "format": "json", "limit": 1, "countrycodes": "il"},
                              headers={"User-Agent": UA, "Accept-Language": "he"}, timeout=30)
             j = r.json()
             if j:
@@ -200,6 +202,20 @@ class Geocoder:
             return None  # do not cache network failures
         self.cache[q] = self.new[q] = res
         return res
+
+
+def clean_address(a):
+    a = re.sub(r"\b(רח'|רחוב|שד'|שדרות)\s*", "", a)
+    a = re.split(r"\s*(?:פינת|פ\.|,|\(|מרכז|קניון)", a)[0]
+    a = re.sub(r"([א-ת])(\d)", r"\1 \2", a)      # "אבן גבירול157" -> "אבן גבירול 157"
+    m = re.match(r"^(\d+)\s+(.+)$", a.strip())     # "1 אחי מאיר" -> "אחי מאיר 1"
+    if m:
+        a = f"{m.group(2)} {m.group(1)}"
+    return " ".join(a.split())
+
+
+def clean_city(c):
+    return re.sub(r"\s*-\s*", "-", c).replace("תל אביב-יפו", "תל אביב")
 
 
 def city_of(store, codes):
@@ -219,7 +235,13 @@ def locate(stores, homes, geo, codes):
             c = geo(f"{city}, ישראל")
             if not c or min(km(c, h["home"]) for h in homes) > h_radius(homes) + 15:
                 continue
-            p = geo(f"{s['address']}, {city}, ישראל") if s["address"] else None
+            p = None
+            street = clean_address(s["address"]) if s["address"] else ""
+            if street and re.search(r"\d", street):
+                p = geo(f"street:{street}|{clean_city(city)}", street=street, city=clean_city(city))
+            if not p and street:
+                p = geo(f"{street}, {clean_city(city)}")
+            s["approx"] = not p
         else:
             # No city in the file: try the address and the branch name.
             p = geo(f"{s['address']}, ישראל") if s["address"] else None
@@ -228,6 +250,8 @@ def locate(stores, homes, geo, codes):
             if p and min(km(p, h["home"]) for h in homes) > h_radius(homes):
                 p = None
             c = None
+        if not p:
+            s["approx"] = True
         p = p or c
         if p:
             s["lat"], s["lng"] = p
@@ -245,8 +269,26 @@ def norm(s):
     return " ".join(re.sub(r"[\"'׳״`.,()\-]", " ", s).split())
 
 
+def variants(p):
+    """Plural and singular spellings of the first word: עגבניות -> עגבניה, מלפפונים -> מלפפון."""
+    first, rest = p.split()[0], p.split()[1:]
+    forms = {first}
+    if first.endswith("ות") and len(first) > 3:
+        forms |= {first[:-2] + "ה", first[:-2] + "ת", first[:-2]}
+    if first.endswith("ים") and len(first) > 3:
+        forms |= {first[:-2], first[:-2] + "ה"}
+    final = str.maketrans("כמנפצ", "ךםןףץ")
+    forms = {f[:-1] + f[-1].translate(final) for f in forms}
+    return {" ".join([f, *rest]) for f in forms}
+
+
 def generic_matches(items, product_names):
-    """Cheapest item whose name starts with the product name as whole words."""
+    """Item for a generic product name, per store.
+
+    Candidates are items whose name starts with the product name (or its singular) as whole words.
+    An item named exactly like the product wins, then items sold by weight (fresh produce),
+    then the cheapest of the rest.
+    """
     by_first = collections.defaultdict(list)
     for it in items:
         n = norm(it["name"])
@@ -257,11 +299,13 @@ def generic_matches(items, product_names):
         p = norm(pname)
         if not p:
             continue
-        best = None
-        for n, it in by_first.get(p.split()[0], []):
-            if n == p or n.startswith(p + " "):
-                if best is None or it["price"] < best["price"]:
-                    best = it
+        best, best_rank = None, None
+        for v in variants(p):
+            for n, it in by_first.get(v.split()[0], []):
+                if n == v or n.startswith(v + " "):
+                    rank = (0 if n == v else 1 if it.get("weighted") else 2, it["price"])
+                    if best_rank is None or rank < best_rank:
+                        best, best_rank = it, rank
         if best:
             out[pname] = best
     return out
@@ -282,7 +326,7 @@ def main():
     if args.dry_run:
         lat, lng = map(float, args.home.split(","))
         homes = [{"home": (lat, lng), "radius": min(args.radius, MAX_RADIUS_KM)}]
-        product_names = ["חלב", "לחם", "ביצים", "עגבניות", "במבה", "קוטג'", "שמן זית", "אורז", "פסטה", "מלפפונים"]
+        product_names = ["חלב", "לחם", "ביצים", "עגבניות", "במבה", "קוטג'", "שמן זית", "אורז", "פסטה", "מלפפונים", "בננות", "תפוחי אדמה", "גבינה צהובה", "שניצל", "קפה"]
         known, cache = {}, {}
     else:
         db = DB(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
@@ -304,7 +348,7 @@ def main():
     for k, s in stores.items():
         old = known.get(k)
         if old and old.get("lat") is not None and old.get("address") == s["address"]:
-            s["lat"], s["lng"], s["geocoded"] = old["lat"], old["lng"], True
+            s["lat"], s["lng"], s["geocoded"], s["approx"] = old["lat"], old["lng"], True, old.get("approx")
     geo = Geocoder(cache)
     locate(stores, homes, geo, city_names())
 
@@ -317,11 +361,11 @@ def main():
             chosen[s["key"]] = (d, s)
     log(f"stores in range: {len(chosen)}")
     for d, s in sorted(chosen.values(), key=lambda x: x[0]):
-        log(f"  {d:5.1f} km  {s['chain_name']} {s['name']} | {s['address']} {s.get('city_name', '')}")
+        log(f"  {d:5.1f} km{' ~' if s.get('approx') else '  '} {s['chain_name']} {s['name']} | {s['address']} {s.get('city_name', '')}")
 
     if db:
         rows = [{k: s.get(k) for k in ("key", "chain_id", "chain_name", "store_id", "name", "address", "lat", "lng")}
-                | {"geocoded": bool(s.get("geocoded"))}
+                | {"geocoded": bool(s.get("geocoded")), "approx": bool(s.get("approx"))}
                 | {"city": s.get("city_name") or s["city"]} for s in stores.values()]
         db.upsert("chain_stores", rows, "key")
         if geo.new:
