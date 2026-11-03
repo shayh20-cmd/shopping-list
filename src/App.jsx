@@ -6,12 +6,14 @@ import ListScreen from './screens/ListScreen'
 import CatalogScreen from './screens/CatalogScreen'
 import ShopScreen from './screens/ShopScreen'
 import SettingsScreen from './screens/SettingsScreen'
+import CompareScreen from './screens/CompareScreen'
 import { LoginScreen, SetupScreen } from './screens/AuthScreens'
 
 const TABS = [
   { key: 'list', label: 'רשימה', icon: 'list' },
   { key: 'catalog', label: 'קטלוג', icon: 'catalog' },
   { key: 'shop', label: 'קנייה', icon: 'shop' },
+  { key: 'compare', label: 'איפה זול', icon: 'compare' },
   { key: 'settings', label: 'הגדרות', icon: 'settings' },
 ]
 
@@ -39,6 +41,7 @@ export default function App() {
         {tab === 'list' && <ListScreen list={list} go={go} />}
         {tab === 'catalog' && <CatalogScreen list={list} />}
         {tab === 'shop' && <ShopScreen list={list} go={go} />}
+        {tab === 'compare' && <CompareScreen list={list} go={go} />}
         {tab === 'settings' && <SettingsScreen />}
       </main>
       <nav className="tabs" aria-label="ניווט ראשי">

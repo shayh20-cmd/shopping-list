@@ -200,7 +200,33 @@ export const actions = {
 
 
   setSettings(patch) {
-    setState({ settings: { ...state.settings, ...patch } })
+    const settings = { ...state.settings, ...patch }
+    setState({ settings })
+    // The nightly price job reads the home location from the household.
+    if (isConfigured && state.household) {
+      const row = { radius_km: settings.radiusKm, home_lat: settings.home?.lat ?? null, home_lng: settings.home?.lng ?? null }
+      setState({ household: { ...state.household, ...row } })
+      enqueue({ table: 'households', type: 'update', id: state.household.id, patch: row })
+    }
+  },
+
+  pinProduct(product, item) {
+    const patch = { barcode: item?.barcode ?? null, barcode_name: item?.name ?? null }
+    upsertLocal('products', [{ id: product.id, ...patch }])
+    enqueue({ table: 'products', type: 'update', id: product.id, patch })
+  },
+
+  // One row per (store in range, list item), computed by the basket_lines SQL function.
+  async basketLines() {
+    const { data, error } = await supabase.rpc('basket_lines', { hh: state.household.id })
+    if (error) throw error
+    return data
+  },
+
+  async searchItems(q) {
+    const { data, error } = await supabase.rpc('search_items', { q })
+    if (error) throw error
+    return data
   },
 
   clearError() {
@@ -303,7 +329,7 @@ async function loadHousehold() {
   if (!uid) return
   const { data, error } = await supabase
     .from('household_members')
-    .select('household_id, households(id, name, invite_code)')
+    .select('household_id, households(*)')
     .eq('user_id', uid)
     .limit(1)
   if (error) return // offline: keep the cached household
@@ -312,7 +338,9 @@ async function loadHousehold() {
     setState({ household: null, products: [], lists: [], items: [], members: [] })
     return
   }
-  setState({ household: hh })
+  const settings = hh.home_lat == null ? state.settings
+    : { ...state.settings, home: { lat: hh.home_lat, lng: hh.home_lng }, radiusKm: hh.radius_km ?? state.settings.radiusKm }
+  setState({ household: hh, settings })
   subscribe(hh.id)
   await refresh()
 }

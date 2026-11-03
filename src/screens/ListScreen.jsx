@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStore, actions } from '../lib/store'
 import { isConfigured } from '../lib/supabase'
 import { CATEGORIES, OTHER, categoryRank } from '../data/catalog'
+import ProductPicker from '../components/ProductPicker'
 
 export function SyncBadge() {
   const s = useStore()
@@ -38,6 +39,9 @@ export function groupByCategory(items) {
 }
 
 function ItemRow({ item }) {
+  const { products } = useStore()
+  const product = item.product_id ? products.find((p) => p.id === item.product_id) : null
+  const [picking, setPicking] = useState(false)
   const editNote = () => {
     const note = window.prompt(`הערה ל${item.name}`, item.note)
     if (note !== null) actions.updateItem(item, { note: note.trim() })
@@ -50,7 +54,13 @@ function ItemRow({ item }) {
           {item.note && <span>{item.note}</span>}
           {item.added_by && <span>הוסיף/ה {item.added_by}</span>}
           <button className="link-btn" onClick={editNote}>{item.note ? 'ערוך הערה' : 'הוסף הערה'}</button>
+          {isConfigured && product && (
+            <button className="link-btn" onClick={() => setPicking(true)}>
+              {product.barcode_name ? `מוצר: ${product.barcode_name}` : 'בחר מוצר מדויק'}
+            </button>
+          )}
         </span>
+        {picking && <ProductPicker product={product} onClose={() => setPicking(false)} />}
       </div>
       <div className="stepper">
         <button aria-label={`הפחת ${item.name}`} onClick={() => actions.setQty(item, item.qty - 1)}>−</button>
