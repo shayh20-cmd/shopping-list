@@ -18,7 +18,7 @@ export function LoginScreen() {
 
   return (
     <div className="center">
-      <h1>רשימת קניות משותפת</h1>
+      <h1>BASKET</h1>
       <span className="sub">רשימה אחת לשניכם, מתעדכנת בזמן אמת בשני הטלפונים.</span>
       {googleEnabled && <button className="btn primary big" onClick={actions.signInWithGoogle}>כניסה עם Google</button>}
       <form className="form" style={{ margin: 0 }} onSubmit={sendLink}>

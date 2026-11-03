@@ -11,12 +11,12 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'רשימת קניות משותפת',
-        short_name: 'קניות',
+        name: 'BASKET',
+        short_name: 'BASKET',
         lang: 'he',
         dir: 'rtl',
         display: 'standalone',
-        background_color: '#F5F3EE',
+        background_color: '#B0502E',
         theme_color: '#F5F3EE',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
