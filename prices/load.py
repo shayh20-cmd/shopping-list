@@ -156,7 +156,12 @@ def parse_prices(path):
             "quantity": f.get("quantity", ""), "unit": f.get("unitofmeasure", ""),
             "weighted": f.get("bisweighted") == "1",
         })
-    return items
+    # A file can list a barcode twice; keep the cheaper line so upserts don't conflict.
+    by_code = {}
+    for it in items:
+        if it["barcode"] not in by_code or it["price"] < by_code[it["barcode"]]["price"]:
+            by_code[it["barcode"]] = it
+    return list(by_code.values())
 
 
 # ---------- geography ----------
@@ -322,6 +327,16 @@ def generic_matches(items, product_names):
     return out
 
 
+def save_store(db, key, items, matches):
+    db.delete("store_prices", {"store_key": f"eq.{key}"})
+    db.upsert("store_prices", [{"store_key": key, "barcode": it["barcode"], "price": it["price"]} for it in items],
+              "store_key,barcode")
+    db.delete("store_generic_prices", {"store_key": f"eq.{key}"})
+    db.upsert("store_generic_prices", [{"store_key": key, "product_name": n, "barcode": it["barcode"],
+                                        "item_name": it["name"], "price": it["price"]} for n, it in matches.items()],
+              "store_key,product_name")
+
+
 # ---------- main ----------
 
 def main():
@@ -389,12 +404,6 @@ def main():
                 | {"geocoded": bool(s.get("geocoded")), "approx": bool(s.get("approx"))}
                 | {"city": s.get("city_name") or s["city"]} for s in stores.values()]
         db.upsert("chain_stores", rows, "key")
-        online = [{"store_key": k, **v} for k, v in ONLINE_STORES.items() if k in stores]
-        try:
-            db.delete("chain_online", {"store_key": "not.is.null"})
-            db.upsert("chain_online", online, "store_key")
-        except RuntimeError as e:
-            log("online stores not saved (run supabase/online.sql):", e)
         if geo.new:
             db.upsert("geo_cache", [{"query": q, "lat": v and v[0], "lng": v and v[1]} for q, v in geo.new.items()], "query")
 
@@ -418,7 +427,7 @@ def main():
             newest[key] = p
     log(f"price files: {len(newest)} of {len(chosen)} stores")
 
-    all_items = {}
+    all_items, failed = {}, 0
     for key, p in newest.items():
         try:
             items = parse_prices(p)
@@ -434,17 +443,26 @@ def main():
             continue
         for it in items:
             all_items[it["barcode"]] = it
-        db.delete("store_prices", {"store_key": f"eq.{key}"})
-        db.upsert("store_prices", [{"store_key": key, "barcode": it["barcode"], "price": it["price"]} for it in items],
-                  "store_key,barcode")
-        db.delete("store_generic_prices", {"store_key": f"eq.{key}"})
-        db.upsert("store_generic_prices", [{"store_key": key, "product_name": n, "barcode": it["barcode"],
-                                            "item_name": it["name"], "price": it["price"]} for n, it in matches.items()],
-                  "store_key,product_name")
+        try:
+            save_store(db, key, items, matches)
+        except Exception as e:
+            log(f"saving {key} failed:", e)
+            failed += 1
     if db and all_items:
         db.upsert("chain_items", [{k: it[k] for k in ("barcode", "name", "manufacturer", "quantity", "unit")}
                                   for it in all_items.values()], "barcode")
         log(f"items catalog: {len(all_items)}")
+    if db:
+        # Only online stores whose prices loaded today, so the app never shows an empty online basket.
+        online = [{"store_key": k, **v} for k, v in ONLINE_STORES.items() if k in newest]
+        try:
+            db.delete("chain_online", {"store_key": "not.is.null"})
+            db.upsert("chain_online", online, "store_key")
+            log(f"online stores: {[o['label'] for o in online]}")
+        except RuntimeError as e:
+            log("online stores not saved (run supabase/online.sql):", e)
+    if failed:
+        sys.exit(f"{failed} stores failed to save")
 
 
 if __name__ == "__main__":
