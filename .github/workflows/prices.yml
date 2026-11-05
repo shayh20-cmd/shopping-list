@@ -1,7 +1,7 @@
 name: Load store prices
 on:
   schedule:
-    - cron: '30 4 * * *'   # every morning, after the chains publish their full price files
+    - cron: '17 4 * * *'   # every morning after the chains publish their full price files; off the busy :00/:30 slots, which GitHub delays for hours
   workflow_dispatch:
     inputs:
       dry_run:
