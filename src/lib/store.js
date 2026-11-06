@@ -135,6 +135,29 @@ function me() {
   return isConfigured ? displayName(state.session) : null
 }
 
+function copyItem(item, listId) {
+  const t = now()
+  return {
+    id: uuid(), household_id: state.household.id, list_id: listId, product_id: item.product_id,
+    name: item.name, category: item.category, qty: item.qty, note: '', checked: false,
+    added_by: me(), created_at: t, updated_at: t,
+  }
+}
+
+// The fixed lists a shopping trip was started from, shown as "מבוסס על".
+function setBases(listId, ids) {
+  const list = state.lists.find((l) => l.id === listId)
+  if (!list || (!ids.length && !list.based_on?.length)) return
+  upsertLocal('lists', [{ id: listId, based_on: ids }])
+  enqueue({ table: 'lists', type: 'update', id: listId, patch: { based_on: ids } })
+}
+
+function insertItems(rows) {
+  if (!rows.length) return
+  upsertLocal('list_items', rows)
+  enqueue({ table: 'list_items', type: 'insert', rows })
+}
+
 // ---------- actions ----------
 
 export const actions = {
@@ -186,6 +209,8 @@ export const actions = {
 
   finishShopping(listId) {
     actions.removeItems(state.items.filter((i) => i.list_id === listId && i.checked).map((i) => i.id))
+    // The next trip picks its base again.
+    setBases(listId, [])
   },
 
   addProduct({ name, category = OTHER }) {
@@ -196,6 +221,52 @@ export const actions = {
     upsertLocal('products', [row])
     enqueue({ table: 'products', type: 'insert', rows: [row] })
     return row
+  },
+
+  // ---------- fixed lists: reusable bases for the next shopping trip ----------
+
+  createFixedList(name) {
+    const row = { id: uuid(), household_id: state.household.id, name: name.trim() || 'רשימה קבועה', kind: 'fixed', tag: null, created_at: now() }
+    upsertLocal('lists', [row])
+    enqueue({ table: 'lists', type: 'insert', rows: [row] })
+    return row
+  },
+
+  renameList(list, name) {
+    const clean = name.trim()
+    if (!clean || clean === list.name) return
+    upsertLocal('lists', [{ id: list.id, name: clean }])
+    enqueue({ table: 'lists', type: 'update', id: list.id, patch: { name: clean } })
+  },
+
+  deleteList(list) {
+    // The server cascades the items; drop them here too.
+    removeLocal('list_items', state.items.filter((i) => i.list_id === list.id).map((i) => i.id))
+    removeLocal('lists', [list.id])
+    enqueue({ table: 'lists', type: 'delete', ids: [list.id] })
+  },
+
+  // Add a fixed list to a shopping list. An item already there keeps the larger quantity.
+  loadFixedList(fixedId, intoId) {
+    const target = state.items.filter((i) => i.list_id === intoId && !i.checked)
+    const rows = []
+    for (const f of state.items.filter((i) => i.list_id === fixedId)) {
+      const existing = target.find((i) => (f.product_id ? i.product_id === f.product_id : i.name === f.name))
+      if (existing) {
+        if (existing.qty < f.qty) actions.setQty(existing, f.qty)
+      } else {
+        rows.push(copyItem(f, intoId))
+      }
+    }
+    insertItems(rows)
+    const bases = state.lists.find((l) => l.id === intoId)?.based_on ?? []
+    if (!bases.includes(fixedId)) setBases(intoId, [...bases, fixedId])
+  },
+
+  // Replace a fixed list's items with what is on a shopping list now (still to buy).
+  saveAsFixedList(fromId, fixedId) {
+    actions.removeItems(state.items.filter((i) => i.list_id === fixedId).map((i) => i.id))
+    insertItems(state.items.filter((i) => i.list_id === fromId && !i.checked).map((i) => copyItem(i, fixedId)))
   },
 
 
