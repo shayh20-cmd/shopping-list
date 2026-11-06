@@ -3,14 +3,17 @@ import { actions } from '../lib/store'
 import Icon from './Icon'
 import { PRODUCE } from '../data/catalog'
 
-// "500 מיליליטר" from the price feed's quantity and unit; empty when the feed has none.
+// The feed's unit is the price-per unit ("100 גרם", "1קילוגרם"), so keep only its name.
+const UNIT_SHORT = { 'גרם': 'גרם', 'קילוגרם': 'ק"ג', 'מיליליטר': 'מ"ל', 'ליטר': 'ליטר', 'יחידה': 'יח׳' }
+
+// "600 גרם" from the price feed's quantity and unit; empty when the feed has none.
 export function sizeLabel(item) {
   const n = Number(item.quantity)
-  if (!n || !item.unit) return ''
-  return `${n} ${item.unit}`
+  const unit = String(item.unit ?? '').replace(/^[\d.\s]+/, '').trim()
+  if (!n || !unit || unit === 'לא ידוע') return ''
+  return `${n} ${UNIT_SHORT[unit] ?? unit}`
 }
 
-// Pin a catalog product ("חלב") to one exact store item (barcode) for price comparison.
 export default function ProductPicker({ product, onClose }) {
   const [q, setQ] = useState(product.name)
   const [res, setRes] = useState({ loading: false, rows: [], error: '' })
