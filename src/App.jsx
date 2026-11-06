@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useStore, actions } from './lib/store'
 import { isConfigured } from './lib/supabase'
 import Icon from './components/Icon'
@@ -22,6 +22,8 @@ export default function App() {
   const [listMode, setListMode] = useState('edit') // 'edit' at home, 'shop' in the store
   // A fixed list being edited in the catalog; null means the catalog adds to the next trip.
   const [editingFixed, setEditingFixed] = useState(null)
+  const screenRef = useRef(null)
+  const [showTop, setShowTop] = useState(false)
 
   if (!s.ready && !s.household) return <div className="app" dir="rtl" />
   if (isConfigured && s.ready && !s.session) return <div className="app" dir="rtl"><LoginScreen /></div>
@@ -49,7 +51,8 @@ export default function App() {
           <button className="link-btn" onClick={actions.clearError}>סגור</button>
         </div>
       )}
-      <main className={`screen ${tab === 'list' && listMode === 'shop' ? 'shop' : ''}`}>
+      <main ref={screenRef} className={`screen ${tab === 'list' && listMode === 'shop' ? 'shop' : ''}`}
+        onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 400)}>
         {tab === 'list' && <ListScreen list={list} mode={listMode} setMode={setListMode} go={go} />}
         {tab === 'catalog' && (
           <CatalogScreen list={list} editingId={editingFixed} editFixed={editFixed} doneEditing={() => setEditingFixed(null)} go={go} />
@@ -58,6 +61,11 @@ export default function App() {
         {tab === 'settings' && <SettingsScreen />}
         {tab === 'purchases' && <PurchasesScreen go={go} />}
       </main>
+      {showTop && (
+        <button className="to-top" aria-label="חזרה למעלה" onClick={() => screenRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}>
+          ↑
+        </button>
+      )}
       <nav className="tabs" aria-label="ניווט ראשי">
         {TABS.map((t) => (
           <button key={t.key} className={`tab ${active === t.key ? 'on' : ''}`} aria-current={active === t.key ? 'page' : undefined}

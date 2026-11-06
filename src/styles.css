@@ -140,3 +140,14 @@ h1 { margin: 6px 0 0; font-size: 30px; font-weight: 800; letter-spacing: -0.5px;
 .base-line .link-btn { color: var(--accent); }
 .icon-btn { flex-shrink: 0; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: none; border-radius: 10px; background: transparent; color: var(--muted); opacity: .55; }
 .icon-btn.on { color: var(--accent); background: var(--accent-soft); opacity: 1; }
+.cat-head { width: calc(100% - 40px); margin: 8px 20px 0; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); font-size: 16px; font-weight: 600; text-align: start; color: var(--ink); }
+.cat-head.open { border-end-start-radius: 0; border-end-end-radius: 0; border-bottom-color: var(--divider); }
+.cat-head.open + .card { border-top: none; border-start-start-radius: 0; border-start-end-radius: 0; }
+.cat-name { flex: 1; }
+.cat-count { font-size: 13px; font-weight: 500; color: var(--muted); }
+.cat-count.some { color: var(--accent); font-weight: 700; }
+.cat-chevron { font-size: 20px; line-height: 1; color: var(--muted); transition: transform .15s; }
+.cat-head.open .cat-chevron { transform: rotate(-90deg); }
+.to-top { position: fixed; z-index: 6; bottom: calc(84px + env(safe-area-inset-bottom)); inset-inline-end: max(16px, calc((100vw - 560px) / 2 + 16px)); width: 48px; height: 48px; border: none; border-radius: 24px; background: var(--ink); color: #fff; font-size: 22px; box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+.chips .reset-ask { flex-basis: 100%; margin: 4px 0 0; }
+.chip:disabled { opacity: .4; }

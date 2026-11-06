@@ -4,6 +4,7 @@ import { isConfigured } from '../lib/supabase'
 import { CATEGORIES, OTHER, categoryRank, qtyLabel } from '../data/catalog'
 import ShopBody from './ShopScreen'
 import { ExactButton } from '../components/ProductPicker'
+import ResetButton from '../components/ResetButton'
 
 export function SyncBadge() {
   const s = useStore()
@@ -231,6 +232,7 @@ function EditBody({ list }) {
           </>
         )}
         <button className="chip ghost" onClick={() => setSheet(true)}>בסס על רשימה קבועה</button>
+        <ResetButton list={list} />
       </div>
       {mine.length === 0 && !showAll && (
         <div className="empty">
