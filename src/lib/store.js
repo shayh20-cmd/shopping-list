@@ -298,6 +298,35 @@ export const actions = {
     if (!bases.includes(fixedId)) setBases(intoId, [...bases, fixedId])
   },
 
+  // What a list holds after "איפוס בחירה": nothing, or for a trip based on fixed lists, exactly those bases.
+  resetPlan(listId) {
+    const list = state.lists.find((l) => l.id === listId)
+    const current = state.items.filter((i) => i.list_id === listId && !i.checked)
+    const base = new Map() // key -> fixed item, the larger quantity when two bases share a product
+    if (list?.kind !== 'fixed') {
+      for (const id of list?.based_on ?? []) {
+        for (const f of state.items.filter((i) => i.list_id === id)) {
+          const k = f.product_id ?? f.name
+          if (!base.has(k) || base.get(k).qty < f.qty) base.set(k, f)
+        }
+      }
+    }
+    const keyOf = (i) => i.product_id ?? i.name
+    return {
+      remove: current.filter((i) => !base.has(keyOf(i))),
+      restore: current.filter((i) => base.has(keyOf(i)) && i.qty !== base.get(keyOf(i)).qty),
+      readd: [...base.values()].filter((f) => !current.some((i) => keyOf(i) === keyOf(f))),
+      base,
+    }
+  },
+
+  resetList(listId) {
+    const { remove, restore, readd, base } = actions.resetPlan(listId)
+    actions.removeItems(remove.map((i) => i.id))
+    for (const i of restore) actions.setQty(i, base.get(i.product_id ?? i.name).qty)
+    insertItems(readd.map((f) => copyItem(f, listId)))
+  },
+
   // Replace a fixed list's items with what is on a shopping list now (still to buy).
   saveAsFixedList(fromId, fixedId) {
     actions.removeItems(state.items.filter((i) => i.list_id === fixedId).map((i) => i.id))

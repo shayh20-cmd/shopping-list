@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStore, actions } from '../lib/store'
 import { CATEGORIES, OTHER, categoryRank, qtyLabel } from '../data/catalog'
 import { ExactButton } from '../components/ProductPicker'
+import ResetButton from '../components/ResetButton'
 
 function ProductRow({ product, item, onAdd }) {
   return (
@@ -98,6 +99,7 @@ export default function CatalogScreen({ list, editingId, editFixed, doneEditing,
   const [sort, setSort] = useState('cat')
   const [newCat, setNewCat] = useState(OTHER)
   const [view, setView] = useState('products') // 'products' | 'fixed'
+  const [openCats, setOpenCats] = useState(() => new Set()) // categories expanded by category sort
 
   if (!list) return <div className="empty">הרשימה נטענת…</div>
 
@@ -176,10 +178,11 @@ export default function CatalogScreen({ list, editingId, editFixed, doneEditing,
           <input className="input" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="למשל: חלב" />
         </label>
       </div>
-      <div className="chips" role="group" aria-label="מיון">
+      <div className="chips wrap" role="group" aria-label="מיון">
         <button className={`chip ${sort === 'cat' ? 'on' : ''}`} aria-pressed={sort === 'cat'} onClick={() => setSort('cat')}>לפי קטגוריה</button>
         <button className={`chip ${sort === 'abc' ? 'on' : ''}`} aria-pressed={sort === 'abc'} onClick={() => setSort('abc')}>א-ב</button>
         <button className={`chip ${sort === 'in' ? 'on' : ''}`} aria-pressed={sort === 'in'} onClick={() => setSort('in')}>רק מה שנבחר</button>
+        <ResetButton list={target} />
       </div>
 
       {query && !exact && (
@@ -197,14 +200,36 @@ export default function CatalogScreen({ list, editingId, editFixed, doneEditing,
 
       {sort === 'in' && !groups.length && <div className="empty">עוד לא נבחרו מוצרים לרשימה הזו.</div>}
 
-      {groups.map(([title, rows]) => (
-        <section key={title}>
-          <div className="group-title">{title}</div>
-          <div className="card">
-            {rows.map((p) => <ProductRow key={p.id} product={p} item={inTarget.get(p.id)} onAdd={() => add(p)} />)}
-          </div>
-        </section>
-      ))}
+      {groups.map(([title, rows]) => {
+        // By category, each category folds; a search shows every match open.
+        const folding = sort === 'cat' && !query
+        const open = !folding || openCats.has(title)
+        const chosen = rows.filter((p) => inTarget.has(p.id)).length
+        const toggle = () => setOpenCats((prev) => {
+          const next = new Set(prev)
+          if (next.has(title)) next.delete(title)
+          else next.add(title)
+          return next
+        })
+        return (
+          <section key={title}>
+            {folding ? (
+              <button className={`cat-head ${open ? 'open' : ''}`} aria-expanded={open} onClick={toggle}>
+                <span className="cat-name">{title}</span>
+                <span className={`cat-count ${chosen ? 'some' : ''}`}>{chosen} מתוך {rows.length}</span>
+                <span className="cat-chevron" aria-hidden="true">‹</span>
+              </button>
+            ) : (
+              <div className="group-title">{title}</div>
+            )}
+            {open && (
+              <div className="card">
+                {rows.map((p) => <ProductRow key={p.id} product={p} item={inTarget.get(p.id)} onAdd={() => add(p)} />)}
+              </div>
+            )}
+          </section>
+        )
+      })}
     </>
   )
 }
