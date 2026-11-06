@@ -93,7 +93,28 @@ function enqueue(op) {
   flush()
 }
 
-function runOp(op) {
+// Columns from a migration that may not have run yet (account-and-lists.sql). If the server
+// doesn't know them (PGRST204), the write is sent again without them instead of failing.
+const OPTIONAL_COLUMNS = { lists: ['created_by', 'updated_at'] }
+
+function withoutOptional(op) {
+  const drop = (r) => Object.fromEntries(Object.entries(r).filter(([k]) => !OPTIONAL_COLUMNS[op.table].includes(k)))
+  if (op.type === 'insert') return { ...op, rows: op.rows.map(drop) }
+  if (op.type === 'update') {
+    const patch = drop(op.patch)
+    return Object.keys(patch).length ? { ...op, patch } : null
+  }
+  return op
+}
+
+async function runOp(op) {
+  const r = await sendOp(op)
+  if (r.error?.code !== 'PGRST204' || !OPTIONAL_COLUMNS[op.table]) return r
+  const lean = withoutOptional(op)
+  return lean ? sendOp(lean) : { error: null }
+}
+
+function sendOp(op) {
   const t = supabase.from(op.table)
   if (op.type === 'insert') return t.insert(op.rows)
   if (op.type === 'update') return t.update(op.patch).eq('id', op.id)
