@@ -7,13 +7,25 @@ const googleEnabled = import.meta.env.VITE_ENABLE_GOOGLE === 'true'
 export function LoginScreen() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
   const sendLink = async (e) => {
     e.preventDefault()
+    setError('')
     const { error } = await actions.signInWithEmail(email.trim())
-    if (error) setError('לא הצלחנו לשלוח קישור. בדקו את הכתובת ונסו שוב.')
+    if (error) setError('לא הצלחנו לשלוח את המייל. בדקו את הכתובת ונסו שוב, או חכו כמה דקות.')
     else setSent(true)
+  }
+
+  const verify = async (e) => {
+    e.preventDefault()
+    setBusy(true)
+    setError('')
+    const { error } = await actions.verifyEmailCode(email.trim(), code.replace(/\s/g, ''))
+    setBusy(false)
+    if (error) setError('הקוד לא נכון או שפג תוקפו. אפשר לבקש קוד חדש.')
   }
 
   return (
@@ -21,15 +33,28 @@ export function LoginScreen() {
       <h1>BASKET</h1>
       <span className="sub">רשימה אחת לשניכם, מתעדכנת בזמן אמת בשני הטלפונים.</span>
       {googleEnabled && <button className="btn primary big" onClick={actions.signInWithGoogle}>כניסה עם Google</button>}
-      <form className="form" style={{ margin: 0 }} onSubmit={sendLink}>
-        <label className="field">
-          <span>{googleEnabled ? 'או קבלו קישור כניסה למייל' : 'כניסה עם קישור למייל'}</span>
-          <input className="input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" />
-        </label>
-        <button className={`btn ${googleEnabled ? '' : 'primary'}`} type="submit">שלחו לי קישור</button>
-        {sent && <span className="sub">נשלח. פתחו את המייל בטלפון הזה ולחצו על הקישור.</span>}
-        {error && <span className="sub" style={{ color: 'var(--warn)' }}>{error}</span>}
-      </form>
+      {!sent ? (
+        <form className="form" style={{ margin: 0 }} onSubmit={sendLink}>
+          <label className="field">
+            <span>{googleEnabled ? 'או כניסה עם המייל' : 'כניסה עם המייל'}</span>
+            <input className="input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" autoComplete="email" />
+          </label>
+          <button className={`btn ${googleEnabled ? '' : 'primary'}`} type="submit">שלחו לי קוד</button>
+          {error && <span className="sub" style={{ color: 'var(--warn)' }}>{error}</span>}
+        </form>
+      ) : (
+        <form className="form" style={{ margin: 0 }} onSubmit={verify}>
+          <span className="sub">שלחנו מייל ל-<bdi dir="ltr">{email}</bdi>. הקלידו כאן את הקוד שבמייל.</span>
+          <label className="field">
+            <span>קוד מהמייל</span>
+            <input className="input code-input" inputMode="numeric" autoComplete="one-time-code" required value={code}
+              onChange={(e) => setCode(e.target.value)} dir="ltr" autoFocus />
+          </label>
+          <button className="btn primary" type="submit" disabled={busy}>{busy ? 'בודק…' : 'כניסה'}</button>
+          {error && <span className="sub" style={{ color: 'var(--warn)' }}>{error}</span>}
+          <button className="link-btn" type="button" onClick={() => { setSent(false); setCode(''); setError('') }}>שלחו קוד חדש או החליפו מייל</button>
+        </form>
+      )}
     </div>
   )
 }
