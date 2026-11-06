@@ -258,7 +258,7 @@ function EditBody({ list }) {
 }
 
 // One list, two modes: edit it at home, check it off in the store.
-export default function ListScreen({ list, mode, setMode }) {
+export default function ListScreen({ list, mode, setMode, go }) {
   const { items } = useStore()
   if (!list) return <div className="empty">הרשימה נטענת…</div>
   const toBuy = items.filter((i) => i.list_id === list.id && !i.checked).length
@@ -275,7 +275,7 @@ export default function ListScreen({ list, mode, setMode }) {
         <button role="tab" aria-selected={mode === 'shop'} className={mode === 'shop' ? 'on' : ''} onClick={() => setMode('shop')}>קנייה</button>
       </div>
       {mode === 'shop'
-        ? <ShopBody list={list} onDone={() => setMode('edit')} />
+        ? <ShopBody list={list} onDone={() => setMode('edit')} go={go} />
         : <EditBody list={list} />}
     </>
   )

@@ -207,6 +207,41 @@ export const actions = {
     enqueue({ table: 'list_items', type: 'delete', ids })
   },
 
+  // Save the checked items as a purchase. Online only: history is read from the server.
+  async savePurchase({ storeName, storeKey = null, total = null, purchasedAt = null, items, source = 'manual' }) {
+    const id = uuid()
+    const hh = state.household.id
+    const head = {
+      id, household_id: hh, store_name: storeName.trim(), store_key: storeKey,
+      total, source, created_by: me(), purchased_at: purchasedAt ?? now(),
+    }
+    let r = await supabase.from('purchases').insert(head)
+    if (r.error) return r.error
+    const rows = items.map((it) => ({
+      purchase_id: id, household_id: hh, product_id: it.product_id ?? null, name: it.name,
+      category: it.category ?? null, barcode: it.barcode ?? null, qty: it.qty ?? 1,
+      unit_price: it.unit_price ?? null, line_total: it.line_total ?? null,
+    }))
+    if (rows.length) {
+      r = await supabase.from('purchase_items').insert(rows)
+      if (r.error) return r.error
+    }
+    return null
+  },
+
+  async loadPurchases() {
+    const { data, error } = await supabase.from('purchases')
+      .select('*, purchase_items(*)').eq('household_id', state.household.id)
+      .order('purchased_at', { ascending: false }).limit(200)
+    if (error) throw error
+    return data
+  },
+
+  async deletePurchase(id) {
+    const { error } = await supabase.from('purchases').delete().eq('id', id)
+    return error
+  },
+
   finishShopping(listId) {
     actions.removeItems(state.items.filter((i) => i.list_id === listId && i.checked).map((i) => i.id))
     // The next trip picks its base again.

@@ -14,21 +14,31 @@ function rank(lines) {
     if (l.price == null) s.missing++
     else { s.found++; s.total += Number(l.price) * l.qty }
   }
-  return [...stores.values()].sort((a, b) => a.missing - b.missing || a.total - b.total)
+  for (const s of stores.values()) s.grand = s.total + (s.online ? Number(s.delivery_fee ?? 0) : 0)
+  return [...stores.values()].sort((a, b) => a.missing - b.missing || a.grand - b.grand)
 }
 
 function StoreCard({ store, best, open, onToggle }) {
   return (
     <button className={`store ${best ? 'best' : ''}`} onClick={onToggle} aria-expanded={open}>
       <div className="store-top">
-        <span className="store-name">{store.chain_name} {store.store_name}</span>
-        <span className="store-total">{shekel(store.total)}</span>
+        <span className="store-name">{store.online ? store.store_name : `${store.chain_name} ${store.store_name}`}</span>
+        <span className="store-total">{shekel(store.grand)}</span>
       </div>
       <div className="row-meta" style={{ marginTop: 4 }}>
         {best && <span className="badge">הכי זול</span>}
         {store.missing > 0 && <span className="badge warn">חסרים {store.missing}</span>}
-        <span>{store.approx ? 'באזור העיר' : `${store.distance_km.toFixed(1)} ק"מ`}</span>
-        {store.address && <span>{store.address}{store.city ? `, ${store.city}` : ''}</span>}
+        {store.online ? (
+          <>
+            <span>{store.delivery_fee != null ? `מוצרים ${shekel(store.total)} + משלוח ${shekel(store.delivery_fee)}` : store.fee_note}</span>
+            {store.min_order != null && store.total < store.min_order && <span className="badge warn">מינימום הזמנה {shekel(store.min_order)}</span>}
+          </>
+        ) : (
+          <>
+            <span>{store.approx ? 'באזור העיר' : `${store.distance_km.toFixed(1)} ק"מ`}</span>
+            {store.address && <span>{store.address}{store.city ? `, ${store.city}` : ''}</span>}
+          </>
+        )}
       </div>
       {open && (
         <div className="lines">
@@ -83,20 +93,31 @@ export default function CompareScreen({ list, go }) {
   else if (state.stores && !state.stores.length) body = (
     <div className="empty">עוד אין מחירים לסניפים ברדיוס {radius} ק"מ. המחירים נטענים פעם ביום בבוקר, אחרי שקובעים מיקום.</div>
   )
-  else if (state.stores) body = (
+  else if (state.stores) {
+    const groups = [
+      ['הזמנה באינטרנט, כולל משלוח', state.stores.filter((x) => x.online)],
+      [`סניפים קרובים, מהזול ליקר`, state.stores.filter((x) => !x.online)],
+    ].filter(([, rows]) => rows.length)
+    body = (
     <>
-      <div className="group-title">{state.stores.length} סניפים, מהזול ליקר</div>
-      <div className="card">
-        {state.stores.map((st, i) => (
-          <StoreCard key={st.store_key} store={st} best={i === 0 && st.found > 0} open={open === st.store_key}
-            onToggle={() => setOpen(open === st.store_key ? null : st.store_key)} />
-        ))}
-      </div>
+      {groups.map(([title, rows]) => (
+        <section key={title}>
+          <div className="group-title">{title}</div>
+          <div className="card">
+            {rows.map((st, i) => (
+              <StoreCard key={st.store_key} store={st} best={i === 0 && st.found > 0} open={open === st.store_key}
+                onToggle={() => setOpen(open === st.store_key ? null : st.store_key)} />
+            ))}
+          </div>
+        </section>
+      ))}
       <p className="sub" style={{ margin: '12px 20px' }}>
-        פריט בלי מוצר מדויק מושווה לפי המוצר הזול ביותר בסניף ששמו מתחיל באותה מילה. אפשר לבחור מוצר מדויק בקטלוג.
+        פריט בלי מוצר מדויק מושווה לפי המוצר הזול ביותר בסניף ששמו מתחיל באותה מילה. אפשר לבחור מוצר מדויק בסמל התגית שליד המוצר.
+        דמי המשלוח הם המחיר הרגיל שהרשת מפרסמת, ומבצעים לא נכללים.
       </p>
     </>
-  )
+    )
+  }
 
   return (
     <>

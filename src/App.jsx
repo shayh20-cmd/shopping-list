@@ -6,6 +6,7 @@ import ListScreen from './screens/ListScreen'
 import CatalogScreen from './screens/CatalogScreen'
 import SettingsScreen from './screens/SettingsScreen'
 import CompareScreen from './screens/CompareScreen'
+import PurchasesScreen from './screens/PurchasesScreen'
 import { LoginScreen, SetupScreen } from './screens/AuthScreens'
 
 const TABS = [
@@ -37,6 +38,8 @@ export default function App() {
     setEditingFixed(id)
     setTab('catalog')
   }
+  // Purchase history is reached from the list's shop mode.
+  const active = tab === 'purchases' ? 'list' : tab
 
   return (
     <div className="app" dir="rtl">
@@ -47,16 +50,17 @@ export default function App() {
         </div>
       )}
       <main className={`screen ${tab === 'list' && listMode === 'shop' ? 'shop' : ''}`}>
-        {tab === 'list' && <ListScreen list={list} mode={listMode} setMode={setListMode} />}
+        {tab === 'list' && <ListScreen list={list} mode={listMode} setMode={setListMode} go={go} />}
         {tab === 'catalog' && (
           <CatalogScreen list={list} editingId={editingFixed} editFixed={editFixed} doneEditing={() => setEditingFixed(null)} go={go} />
         )}
         {tab === 'compare' && <CompareScreen list={list} go={go} />}
         {tab === 'settings' && <SettingsScreen />}
+        {tab === 'purchases' && <PurchasesScreen go={go} />}
       </main>
       <nav className="tabs" aria-label="ניווט ראשי">
         {TABS.map((t) => (
-          <button key={t.key} className={`tab ${tab === t.key ? 'on' : ''}`} aria-current={tab === t.key ? 'page' : undefined}
+          <button key={t.key} className={`tab ${active === t.key ? 'on' : ''}`} aria-current={active === t.key ? 'page' : undefined}
             onClick={() => go(t.key)}>
             <span className="tab-icon"><Icon name={t.icon} /></span>
             <span>{t.label}</span>

@@ -5,6 +5,8 @@ import './splash.css'
 const SEEN_KEY = 'basket-splash-seen'
 const PLAY_MS = 3400
 const FADE_MS = 450
+// Wordmark: the B is drawn as a cart; the rest is Rubik 700 set at 1000 units with 40 units tracking.
+const LETTERS = [['A', 744], ['S', 1500], ['K', 2203], ['E', 2906], ['T', 3585]]
 
 function alreadySeen() {
   try { return sessionStorage.getItem(SEEN_KEY) === '1' } catch { return false }
@@ -55,10 +57,19 @@ export default function Splash() {
         <Star className="sp-star big" d="2.4s" />
         <Star className="sp-star small" d="2.6s" />
       </div>
-      <h1 className="splash-name" aria-label="BASKET">
-        {'BASKET'.split('').map((ch, i) => (
-          <span key={i} className="sp-ltr" style={{ '--d': `${1.7 + i * 0.08}s` }} aria-hidden="true">{ch}</span>
-        ))}
+      <h1 className="splash-name">
+        <svg viewBox="-200 -720 4444 960" fill="currentColor" stroke="currentColor" role="img" aria-label="BASKET">
+          <g className="sp-ltr" style={{ '--d': '1.7s' }}>
+            <rect x="70" y="-703" width="180" height="703" rx="24" stroke="none" />
+            <path d="M-120 -638 H160 M160 -638 H420 C635 -638 635 -358 420 -358 H160 M160 -358 H440 C647 -358 647 -65 440 -65 H160"
+              fill="none" strokeWidth="130" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="230" cy="150" r="78" stroke="none" />
+            <circle cx="530" cy="150" r="78" stroke="none" />
+          </g>
+          {LETTERS.map(([ch, x], i) => (
+            <text key={ch} className="sp-ltr" style={{ '--d': `${1.78 + i * 0.08}s` }} x={x} y="0" stroke="none">{ch}</text>
+          ))}
+        </svg>
       </h1>
       <p className="splash-motto sp-fade" style={{ '--d': '2.3s' }}>
         Same Shopping. <b>Smarter Choices.</b>

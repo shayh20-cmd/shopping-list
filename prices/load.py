@@ -17,6 +17,15 @@ CHAINS = [
     "STOP_MARKET", "FRESH_MARKET_AND_SUPER_DOSH", "KING_STORE", "ZOL_VEBEGADOL",
     "SUPER_YUDA", "CITY_MARKET_SHOPS", "SHUK_AHIR", "NETIV_HASED",
 ]
+ONLINE = re.compile(r"אונליין|online|אינטרנט|משלוח|ליקוט|דיגיטל|b-?klick|pick", re.I)
+# Online stores in the price files (StoreType 2) that deliver to the Tel Aviv area, with the
+# delivery fees published by the chains (checked 2026-11-03; see README).
+ONLINE_STORES = {
+    "7290027600007-413": {"label": "שופרסל אונליין", "delivery_fee": 35.90, "min_order": None, "fee_note": None},
+    "7290058140886-39": {"label": "רמי לוי אונליין", "delivery_fee": 35.90, "min_order": None, "fee_note": None},
+    "7290873255550-519": {"label": "טיב טעם B-Klick", "delivery_fee": None, "min_order": 300,
+                          "fee_note": "דמי המשלוח מוצגים רק בסל באתר"},
+}
 MAX_RADIUS_KM = 20
 MAX_STORES_PER_HOME = 40
 UA = "shopping-list-price-loader (+https://github.com/shayh20-cmd/shopping-list)"
@@ -121,7 +130,7 @@ def parse_stores(paths):
                 "key": f"{chain_id}-{sid}", "chain_id": chain_id,
                 "chain_name": f.get("chainname") or chain_name or chain_id,
                 "store_id": sid, "name": name, "address": f.get("address", ""),
-                "city": f.get("city", ""),
+                "city": f.get("city", ""), "type": f.get("storetype", ""),
             }
         log(f"stores: {chain_name or chain_id}: {sum(1 for s in stores.values() if s['chain_id'] == chain_id)}")
     return stores
@@ -147,7 +156,12 @@ def parse_prices(path):
             "quantity": f.get("quantity", ""), "unit": f.get("unitofmeasure", ""),
             "weighted": f.get("bisweighted") == "1",
         })
-    return items
+    # A file can list a barcode twice; keep the cheaper line so upserts don't conflict.
+    by_code = {}
+    for it in items:
+        if it["barcode"] not in by_code or it["price"] < by_code[it["barcode"]]["price"]:
+            by_code[it["barcode"]] = it
+    return list(by_code.values())
 
 
 # ---------- geography ----------
@@ -221,8 +235,16 @@ def clean_city(c):
 def city_of(store, codes):
     c = store["city"].strip()
     if c.isdigit():
-        return codes.get(c.lstrip("0"), "") if c.strip("0") else ""
-    return c
+        c = codes.get(c.lstrip("0"), "") if c.strip("0") else ""
+    if c:
+        return c
+    # No city in the file: look for a known city name in the branch name or address.
+    text = f" {norm(store['name'])} {norm(store['address'])} "
+    names = sorted({clean_city(n) for n in codes.values() if len(n) >= 3} | {"תל אביב"}, key=len, reverse=True)
+    for n in names:
+        if f" {norm(n)} " in text:
+            return n
+    return ""
 
 
 def locate(stores, homes, geo, codes):
@@ -243,13 +265,7 @@ def locate(stores, homes, geo, codes):
                 p = geo(f"{street}, {clean_city(city)}")
             s["approx"] = not p
         else:
-            # No city in the file: try the address and the branch name.
-            p = geo(f"{s['address']}, ישראל") if s["address"] else None
-            if not p and s["name"]:
-                p = geo(f"{s['name']}, ישראל")
-            if p and min(km(p, h["home"]) for h in homes) > h_radius(homes):
-                p = None
-            c = None
+            continue  # without a city a geocode is a guess; leave the store out
         if not p:
             s["approx"] = True
         p = p or c
@@ -311,6 +327,16 @@ def generic_matches(items, product_names):
     return out
 
 
+def save_store(db, key, items, matches):
+    db.delete("store_prices", {"store_key": f"eq.{key}"})
+    db.upsert("store_prices", [{"store_key": key, "barcode": it["barcode"], "price": it["price"]} for it in items],
+              "store_key,barcode")
+    db.delete("store_generic_prices", {"store_key": f"eq.{key}"})
+    db.upsert("store_generic_prices", [{"store_key": key, "product_name": n, "barcode": it["barcode"],
+                                        "item_name": it["name"], "price": it["price"]} for n, it in matches.items()],
+              "store_key,product_name")
+
+
 # ---------- main ----------
 
 def main():
@@ -319,6 +345,7 @@ def main():
     ap.add_argument("--home", help="LAT,LNG for --dry-run")
     ap.add_argument("--radius", type=float, default=5)
     ap.add_argument("--chains", default=",".join(CHAINS))
+    ap.add_argument("--list-online", action="store_true", help="print online-looking stores and exit")
     args = ap.parse_args()
     chains = args.chains.split(",")
 
@@ -347,9 +374,15 @@ def main():
     stores = parse_stores(paths)
     for k, s in stores.items():
         old = known.get(k)
-        if old and old.get("lat") is not None and old.get("address") == s["address"]:
+        if old and old.get("lat") is not None and old.get("address") == s["address"] and not old.get("city", "").strip("0123456789 ") == "":
             s["lat"], s["lng"], s["geocoded"], s["approx"] = old["lat"], old["lng"], True, old.get("approx")
     geo = Geocoder(cache)
+    if args.list_online:
+        for st in stores.values():
+            if st["type"] != "1" or ONLINE.search(st["name"] + " " + st["address"]):
+                log(f"online? type={st['type']} {st['key']} {st['chain_name']} | {st['name']} | {st['address']} | {st['city']}")
+        log("types:", collections.Counter((s_["chain_name"], s_["type"]) for s_ in stores.values()))
+        return
     locate(stores, homes, geo, city_names())
 
     # 2. Nearest stores per home.
@@ -359,7 +392,10 @@ def main():
                       key=lambda x: x[0])
         for d, s in [x for x in near if x[0] <= h["radius"]][:MAX_STORES_PER_HOME]:
             chosen[s["key"]] = (d, s)
-    log(f"stores in range: {len(chosen)}")
+    for k in ONLINE_STORES:
+        if k in stores:
+            chosen[k] = (0, stores[k])
+    log(f"stores in range (with online): {len(chosen)}")
     for d, s in sorted(chosen.values(), key=lambda x: x[0]):
         log(f"  {d:5.1f} km{' ~' if s.get('approx') else '  '} {s['chain_name']} {s['name']} | {s['address']} {s.get('city_name', '')}")
 
@@ -391,7 +427,7 @@ def main():
             newest[key] = p
     log(f"price files: {len(newest)} of {len(chosen)} stores")
 
-    all_items = {}
+    all_items, failed = {}, 0
     for key, p in newest.items():
         try:
             items = parse_prices(p)
@@ -407,17 +443,26 @@ def main():
             continue
         for it in items:
             all_items[it["barcode"]] = it
-        db.delete("store_prices", {"store_key": f"eq.{key}"})
-        db.upsert("store_prices", [{"store_key": key, "barcode": it["barcode"], "price": it["price"]} for it in items],
-                  "store_key,barcode")
-        db.delete("store_generic_prices", {"store_key": f"eq.{key}"})
-        db.upsert("store_generic_prices", [{"store_key": key, "product_name": n, "barcode": it["barcode"],
-                                            "item_name": it["name"], "price": it["price"]} for n, it in matches.items()],
-                  "store_key,product_name")
+        try:
+            save_store(db, key, items, matches)
+        except Exception as e:
+            log(f"saving {key} failed:", e)
+            failed += 1
     if db and all_items:
         db.upsert("chain_items", [{k: it[k] for k in ("barcode", "name", "manufacturer", "quantity", "unit")}
                                   for it in all_items.values()], "barcode")
         log(f"items catalog: {len(all_items)}")
+    if db:
+        # Only online stores whose prices loaded today, so the app never shows an empty online basket.
+        online = [{"store_key": k, **v} for k, v in ONLINE_STORES.items() if k in newest]
+        try:
+            db.delete("chain_online", {"store_key": "not.is.null"})
+            db.upsert("chain_online", online, "store_key")
+            log(f"online stores: {[o['label'] for o in online]}")
+        except RuntimeError as e:
+            log("online stores not saved (run supabase/online.sql):", e)
+    if failed:
+        sys.exit(f"{failed} stores failed to save")
 
 
 if __name__ == "__main__":
