@@ -36,6 +36,11 @@ export function seedProducts() {
   return Object.entries(SEED).flatMap(([category, names]) => names.map((name) => ({ name, category })))
 }
 
+export const PRODUCE = 'ירקות ופירות'
+
+// Produce is counted in kilos; everything else in units.
+export const qtyLabel = (item) => (item.category === PRODUCE ? `${item.qty} ק"ג` : `${item.qty}`)
+
 export function categoryRank(category) {
   const i = CATEGORIES.indexOf(category)
   return i === -1 ? CATEGORIES.length : i

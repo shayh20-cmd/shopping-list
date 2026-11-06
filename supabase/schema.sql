@@ -29,8 +29,9 @@ create table if not exists lists (
   id uuid primary key,
   household_id uuid not null references households on delete cascade,
   name text not null,
-  kind text not null default 'grocery' check (kind in ('grocery', 'general')),
+  kind text not null default 'grocery' check (kind in ('grocery', 'general', 'fixed')),
   tag text,
+  based_on uuid[] not null default '{}',
   created_at timestamptz not null default now()
 );
 

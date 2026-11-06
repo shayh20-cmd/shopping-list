@@ -81,7 +81,7 @@ export default function PurchasesScreen({ go }) {
       <header className="head">
         <div className="head-row">
           <h1>הקניות שלי</h1>
-          <button className="link-btn" style={{ fontSize: 14 }} onClick={() => go('shop')}>חזרה לקנייה</button>
+          <button className="link-btn" style={{ fontSize: 14 }} onClick={() => go('list')}>חזרה לרשימה</button>
         </div>
         <span className="sub">כל הקניות שנשמרו, לפי חודש</span>
       </header>
