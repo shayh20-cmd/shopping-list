@@ -12,7 +12,7 @@ function ProductRow({ product, item, onAdd }) {
         {product.barcode_name && <span className="row-meta">{product.barcode_name}</span>}
       </div>
       <ExactButton product={product} />
-      {item ? (
+      {!onAdd ? null : item ? (
         <div className="stepper">
           <button aria-label={`הפחת ${product.name}`} onClick={() => actions.setQty(item, item.qty - 1)}>−</button>
           <span>{qtyLabel(item)}</span>
@@ -23,6 +23,16 @@ function ProductRow({ product, item, onAdd }) {
       )}
     </div>
   )
+}
+
+// "היום", "אתמול", or the date.
+function when(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 86400000)
+  if (days === 0) return 'היום'
+  if (days === 1) return 'אתמול'
+  return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: days > 300 ? '2-digit' : undefined })
 }
 
 // The fixed lists: create, open for editing, rename, delete. Using one for a trip happens on the list.
@@ -59,12 +69,16 @@ function FixedListsView({ editFixed }) {
         <div className="card" style={{ marginTop: 8 }}>
           {fixedLists.map((f) => {
             const mode = open?.id === f.id ? open.mode : null
+            const own = items.filter((i) => i.list_id === f.id)
+            const updated = [f.updated_at, f.created_at, ...own.map((i) => i.updated_at)].filter(Boolean).sort().pop()
             return (
               <div key={f.id} className="row">
                 <div className="row-main">
                   <span className="row-name">{f.name}</span>
                   <span className="row-meta">
-                    <span>{items.filter((i) => i.list_id === f.id).length} פריטים</span>
+                    <span>{own.length} פריטים</span>
+                    {f.created_by && <span>נוצרה ע״י {f.created_by}</span>}
+                    <span>עודכנה {when(updated)}</span>
                     <button className="link-btn" onClick={() => { setOpen({ id: f.id, mode: 'rename' }); setName(f.name) }}>שנה שם</button>
                     <button className="link-btn" onClick={() => setOpen({ id: f.id, mode: 'delete' })}>מחק</button>
                   </span>
@@ -105,6 +119,7 @@ export default function CatalogScreen({ list, editingId, editFixed, doneEditing,
 
   const target = lists.find((l) => l.id === editingId && l.kind === 'fixed') ?? list
   const editing = target.kind === 'fixed'
+  const sortBy = !editing && sort === 'in' ? 'cat' : sort // "רק מה שנבחר" belongs to fixed-list editing
 
   const viewSwitch = (
     <div className="segmented" role="tablist" aria-label="תצוגת הקטלוג">
@@ -133,9 +148,9 @@ export default function CatalogScreen({ list, editingId, editFixed, doneEditing,
   const byCategory = (a, b) => categoryRank(a.category) - categoryRank(b.category) || a.name.localeCompare(b.name, 'he')
 
   let groups
-  if (sort === 'abc') {
+  if (sortBy === 'abc') {
     groups = matches.length ? [['כל המוצרים, א עד ת', [...matches].sort((a, b) => a.name.localeCompare(b.name, 'he'))]] : []
-  } else if (sort === 'in') {
+  } else if (sortBy === 'in') {
     const chosen = matches.filter((p) => inTarget.has(p.id)).sort(byCategory)
     groups = chosen.length ? [[`נבחרו ${chosen.length}`, chosen]] : []
   } else {
@@ -149,8 +164,10 @@ export default function CatalogScreen({ list, editingId, editFixed, doneEditing,
 
   const add = (p) => actions.addToList(target.id, { name: p.name, category: p.category, productId: p.id })
 
+  // Browsing the catalog only adds products to it; lists are built on the list page or in a fixed list.
   const addNew = () => {
-    add(actions.addProduct({ name: query, category: newCat }))
+    const p = actions.addProduct({ name: query, category: newCat })
+    if (editing) add(p)
     setQ('')
   }
 
@@ -161,15 +178,10 @@ export default function CatalogScreen({ list, editingId, editFixed, doneEditing,
           <span>עורכים רשימה קבועה: <b>{target.name}</b> · {targetItems.length} פריטים</span>
           <button className="btn small" onClick={doneEditing}>סיום</button>
         </div>
-      ) : (
-        <button className="bar" onClick={() => go('list')}>
-          <span>{targetItems.length} פריטים ברשימה</span>
-          <span>לרשימה ←</span>
-        </button>
-      )}
+      ) : null}
       <header className="head">
         <h1>{editing ? target.name : 'קטלוג'}</h1>
-        <span className="sub">{editing ? 'מה שתבחרו כאן נכנס רק לרשימה הקבועה, לא לקנייה הקרובה.' : 'בחרו מוצרים לקנייה הקרובה.'}</span>
+        <span className="sub">{editing ? 'מה שתבחרו כאן נכנס רק לרשימה הקבועה, לא לקנייה הקרובה.' : 'כל המוצרים של הבית. סמל התגית בוחר מוצר מדויק וגודל, למחיר מדויק.'}</span>
       </header>
       {!editing && viewSwitch}
       <div className="quick-add">
@@ -181,8 +193,12 @@ export default function CatalogScreen({ list, editingId, editFixed, doneEditing,
       <div className="chips wrap" role="group" aria-label="מיון">
         <button className={`chip ${sort === 'cat' ? 'on' : ''}`} aria-pressed={sort === 'cat'} onClick={() => setSort('cat')}>לפי קטגוריה</button>
         <button className={`chip ${sort === 'abc' ? 'on' : ''}`} aria-pressed={sort === 'abc'} onClick={() => setSort('abc')}>א-ב</button>
-        <button className={`chip ${sort === 'in' ? 'on' : ''}`} aria-pressed={sort === 'in'} onClick={() => setSort('in')}>רק מה שנבחר</button>
-        <ResetButton list={target} />
+        {editing && (
+          <>
+            <button className={`chip ${sort === 'in' ? 'on' : ''}`} aria-pressed={sort === 'in'} onClick={() => setSort('in')}>רק מה שנבחר</button>
+            <ResetButton list={target} />
+          </>
+        )}
       </div>
 
       {query && !exact && (
@@ -194,15 +210,15 @@ export default function CatalogScreen({ list, editingId, editFixed, doneEditing,
               {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
             </select>
           </label>
-          <button className="btn primary" onClick={addNew}>{editing ? `הוסף לקטלוג ול${target.name}` : 'הוסף לקטלוג ולקנייה'}</button>
+          <button className="btn primary" onClick={addNew}>{editing ? `הוסף לקטלוג ול${target.name}` : 'הוסף לקטלוג'}</button>
         </div>
       )}
 
-      {sort === 'in' && !groups.length && <div className="empty">עוד לא נבחרו מוצרים לרשימה הזו.</div>}
+      {sortBy === 'in' && !groups.length && <div className="empty">עוד לא נבחרו מוצרים לרשימה הזו.</div>}
 
       {groups.map(([title, rows]) => {
         // By category, each category folds; a search shows every match open.
-        const folding = sort === 'cat' && !query
+        const folding = sortBy === 'cat' && !query
         const open = !folding || openCats.has(title)
         const chosen = rows.filter((p) => inTarget.has(p.id)).length
         const toggle = () => setOpenCats((prev) => {
@@ -216,7 +232,7 @@ export default function CatalogScreen({ list, editingId, editFixed, doneEditing,
             {folding ? (
               <button className={`cat-head ${open ? 'open' : ''}`} aria-expanded={open} onClick={toggle}>
                 <span className="cat-name">{title}</span>
-                <span className={`cat-count ${chosen ? 'some' : ''}`}>{chosen} מתוך {rows.length}</span>
+                <span className={`cat-count ${chosen ? 'some' : ''}`}>{editing ? `${chosen} מתוך ${rows.length}` : rows.length}</span>
                 <span className="cat-chevron" aria-hidden="true">‹</span>
               </button>
             ) : (
@@ -224,7 +240,7 @@ export default function CatalogScreen({ list, editingId, editFixed, doneEditing,
             )}
             {open && (
               <div className="card">
-                {rows.map((p) => <ProductRow key={p.id} product={p} item={inTarget.get(p.id)} onAdd={() => add(p)} />)}
+                {rows.map((p) => <ProductRow key={p.id} product={p} item={inTarget.get(p.id)} onAdd={editing ? () => add(p) : null} />)}
               </div>
             )}
           </section>

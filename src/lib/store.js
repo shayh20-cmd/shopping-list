@@ -152,10 +152,21 @@ function setBases(listId, ids) {
   enqueue({ table: 'lists', type: 'update', id: listId, patch: { based_on: ids } })
 }
 
+// A fixed list shows when it last changed, so editing its items bumps it.
+function touchLists(listIds) {
+  const t = now()
+  for (const id of new Set(listIds)) {
+    if (state.lists.find((l) => l.id === id)?.kind !== 'fixed') continue
+    upsertLocal('lists', [{ id, updated_at: t }])
+    enqueue({ table: 'lists', type: 'update', id, patch: { updated_at: t } })
+  }
+}
+
 function insertItems(rows) {
   if (!rows.length) return
   upsertLocal('list_items', rows)
   enqueue({ table: 'list_items', type: 'insert', rows })
+  touchLists(rows.map((r) => r.list_id))
 }
 
 // ---------- actions ----------
@@ -186,8 +197,7 @@ export const actions = {
       created_at: now(),
       updated_at: now(),
     }
-    upsertLocal('list_items', [row])
-    enqueue({ table: 'list_items', type: 'insert', rows: [row] })
+    insertItems([row])
   },
 
   setQty(item, qty) {
@@ -199,10 +209,13 @@ export const actions = {
     const p = { ...patch, updated_at: now() }
     upsertLocal('list_items', [{ id: item.id, ...p }])
     enqueue({ table: 'list_items', type: 'update', id: item.id, patch: p })
+    touchLists([item.list_id])
   },
 
   removeItems(ids) {
     if (!ids.length) return
+    const drop = new Set(ids)
+    touchLists(state.items.filter((i) => drop.has(i.id)).map((i) => i.list_id))
     removeLocal('list_items', ids)
     enqueue({ table: 'list_items', type: 'delete', ids })
   },
@@ -261,7 +274,11 @@ export const actions = {
   // ---------- fixed lists: reusable bases for the next shopping trip ----------
 
   createFixedList(name) {
-    const row = { id: uuid(), household_id: state.household.id, name: name.trim() || 'רשימה קבועה', kind: 'fixed', tag: null, created_at: now() }
+    const t = now()
+    const row = {
+      id: uuid(), household_id: state.household.id, name: name.trim() || 'רשימה קבועה', kind: 'fixed', tag: null,
+      created_at: t, updated_at: t, ...(isConfigured ? { created_by: me() } : {}),
+    }
     upsertLocal('lists', [row])
     enqueue({ table: 'lists', type: 'insert', rows: [row] })
     return row
@@ -318,6 +335,25 @@ export const actions = {
       readd: [...base.values()].filter((f) => !current.some((i) => keyOf(i) === keyOf(f))),
       base,
     }
+  },
+
+  // Take one fixed list out of the trip: its items go, unless another base still has them.
+  removeBase(listId, baseId) {
+    const list = state.lists.find((l) => l.id === listId)
+    const rest = (list?.based_on ?? []).filter((id) => id !== baseId)
+    const keyOf = (i) => i.product_id ?? i.name
+    const kept = new Set(state.items.filter((i) => rest.includes(i.list_id)).map(keyOf))
+    const fromBase = new Set(state.items.filter((i) => i.list_id === baseId).map(keyOf))
+    actions.removeItems(state.items
+      .filter((i) => i.list_id === listId && !i.checked && fromBase.has(keyOf(i)) && !kept.has(keyOf(i)))
+      .map((i) => i.id))
+    setBases(listId, rest)
+  },
+
+  // Empty the trip and drop its bases, back to choosing how to start.
+  clearTrip(listId) {
+    actions.removeItems(state.items.filter((i) => i.list_id === listId && !i.checked).map((i) => i.id))
+    setBases(listId, [])
   },
 
   resetList(listId) {
@@ -387,6 +423,14 @@ export const actions = {
     queue = []
     writeJSON(QUEUE_KEY, queue)
     setState({ ...empty, ready: true })
+  },
+
+  // Deletes the user on the server (delete_my_account in account-and-lists.sql), then signs out.
+  async deleteAccount() {
+    const { error } = await supabase.rpc('delete_my_account')
+    if (error) return error
+    await actions.signOut()
+    return null
   },
 
   async createHousehold(name) {
