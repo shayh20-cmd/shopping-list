@@ -75,11 +75,57 @@ export default function SettingsScreen() {
         </section>
       )}
 
-      {isConfigured && (
-        <div className="actions">
-          <button className="btn" onClick={actions.signOut}>התנתקות</button>
-        </div>
-      )}
+      {isConfigured && <AccountSection />}
     </>
+  )
+}
+
+// Sign out keeps everything on the server; deleting the account removes the user for good.
+function AccountSection() {
+  const s = useStore()
+  const [ask, setAsk] = useState(null) // 'out' | 'delete'
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const shared = s.members.length > 1
+
+  const remove = async () => {
+    setBusy(true)
+    setErr('')
+    const error = await actions.deleteAccount()
+    setBusy(false)
+    if (error) setErr(error.code === 'PGRST202' ? 'מחיקת חשבון עוד לא הוגדרה ב-Supabase.' : 'המחיקה נכשלה. בדקו את החיבור ונסו שוב.')
+  }
+
+  return (
+    <section className="form">
+      <h2>החשבון שלי</h2>
+      <span style={{ fontSize: 15 }}>{s.session?.user?.email}</span>
+      <span className="sub">הרשימות והקטלוג שמורים בשרת. גם אם מוחקים את האפליקציה מהטלפון, מתחברים שוב עם אותו מייל וכל הנתונים שם.</span>
+
+      {ask === 'out' ? (
+        <div className="inline-form">
+          <span>להתנתק מהמכשיר הזה? הנתונים נשארים בחשבון.</span>
+          <button className="btn small primary" onClick={actions.signOut}>התנתק</button>
+          <button className="btn small" onClick={() => setAsk(null)}>ביטול</button>
+        </div>
+      ) : (
+        <button className="btn" onClick={() => setAsk('out')} disabled={busy}>התנתקות</button>
+      )}
+
+      {ask === 'delete' ? (
+        <div className="inline-form" role="alertdialog" aria-label="מחיקת חשבון">
+          <span>
+            {shared
+              ? 'למחוק את החשבון לצמיתות? תצאו מהבית, והרשימות יישארו אצל שאר בני הבית.'
+              : 'למחוק את החשבון לצמיתות? כל הרשימות, הקטלוג והיסטוריית הקניות יימחקו, ואי אפשר לשחזר.'}
+          </span>
+          <button className="btn small danger" onClick={remove} disabled={busy}>{busy ? 'מוחק…' : 'כן, מחק את החשבון'}</button>
+          <button className="btn small" onClick={() => setAsk(null)} disabled={busy}>ביטול</button>
+        </div>
+      ) : (
+        <button className="btn danger" onClick={() => setAsk('delete')} disabled={busy}>מחיקת חשבון</button>
+      )}
+      {err && <span className="sub" role="alert" style={{ color: 'var(--warn)' }}>{err}</span>}
+    </section>
   )
 }
