@@ -96,6 +96,14 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; text
 .shop-name { flex: 1; font-size: 18px; font-weight: 500; }
 .shop-row.done .shop-name { color: var(--done); text-decoration: line-through; font-weight: 400; }
 .shop-qty { font-size: 14px; color: var(--muted); }
+.shop-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.shop-market { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.shop-market b { color: var(--accent); font-weight: 700; }
+.shop-market.none { font-style: italic; }
+.shop-row.done .shop-market { opacity: .6; }
+.market-toggle { margin: 0 20px 8px; display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 15px; }
+.market-toggle input { width: 20px; height: 20px; accent-color: var(--accent); }
+.market-toggle .sub { margin-inline-start: auto; }
 .shop-note { display: block; font-size: 13px; color: var(--muted); }
 
 .grid { padding: 0 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
