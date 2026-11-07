@@ -415,6 +415,19 @@ export const actions = {
     return data
   },
 
+  // One scanned barcode: the item, and its price at every loaded store (physical ones carry coordinates).
+  async barcodePrices(code) {
+    const [item, prices, online] = await Promise.all([
+      supabase.from('chain_items').select('barcode, name, manufacturer, quantity, unit').eq('barcode', code).maybeSingle(),
+      supabase.from('store_prices')
+        .select('price, store_key, chain_stores(chain_name, name, address, city, lat, lng, approx)').eq('barcode', code),
+      supabase.from('chain_online').select('store_key, label, delivery_fee'),
+    ])
+    const error = item.error || prices.error
+    if (error) throw error
+    return { item: item.data, prices: prices.data, online: online.data ?? [] }
+  },
+
   async searchItems(q) {
     const { data, error } = await supabase.rpc('search_items', { q })
     if (error) throw error
