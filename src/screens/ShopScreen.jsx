@@ -4,6 +4,7 @@ import { isConfigured } from '../lib/supabase'
 import { PRODUCE, categoryRank, qtyLabel } from '../data/catalog'
 import Icon from '../components/Icon'
 import { QuickAdd } from './ListScreen'
+import ScanButton from '../components/BarcodeScan'
 
 function FinishSheet({ list, bought, onClose, onDone }) {
   const s = useStore()
@@ -89,6 +90,7 @@ export default function ShopBody({ list, onDone, go }) {
         </div>
       </div>
 
+      <div className="scan-bar"><ScanButton list={list} /></div>
       {mine.length === 0 && <div className="empty">אין מה לקנות ברשימה הזו.</div>}
       <div className="shop-list">
         {mine.map((it) => (

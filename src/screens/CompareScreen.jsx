@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useStore, actions } from '../lib/store'
 import { isConfigured } from '../lib/supabase'
+import ScanButton from '../components/BarcodeScan'
 
 const shekel = (n) => `₪${Number(n).toFixed(2)}`
 
@@ -125,6 +126,7 @@ export default function CompareScreen({ list, go }) {
         <h1>איפה הכי זול</h1>
         <span className="sub">{count} פריטים · רדיוס {radius} ק"מ</span>
       </header>
+      <div className="scan-bar"><ScanButton list={list} /></div>
       {body}
     </>
   )

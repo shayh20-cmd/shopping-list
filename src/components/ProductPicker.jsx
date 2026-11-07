@@ -14,6 +14,12 @@ export function sizeLabel(item) {
   return `${n} ${UNIT_SHORT[unit] ?? unit}`
 }
 
+// The exact item's name with its size, so the list shows which package was chosen.
+export function exactName(item) {
+  const size = sizeLabel(item)
+  return size && !item.name.includes(String(Number(item.quantity))) ? `${item.name} · ${size}` : item.name
+}
+
 export default function ProductPicker({ product, onClose }) {
   const [q, setQ] = useState(product.name)
   const [res, setRes] = useState({ loading: false, rows: [], error: '' })
@@ -31,9 +37,7 @@ export default function ProductPicker({ product, onClose }) {
   }, [q])
 
   const pick = (item) => {
-    // Keep the size with the name, so the list shows which package was chosen.
-    const size = item && sizeLabel(item)
-    actions.pinProduct(product, item && { ...item, name: size && !item.name.includes(String(Number(item.quantity))) ? `${item.name} · ${size}` : item.name })
+    actions.pinProduct(product, item && { ...item, name: exactName(item) })
     onClose()
   }
 
