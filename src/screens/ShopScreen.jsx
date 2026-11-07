@@ -72,18 +72,20 @@ function useMarketPrices(on, ids) {
   const [best, setBest] = useState({})
   const [state, setState] = useState('idle') // idle | loading | ready | error
   const asked = useRef(new Set())
+  const mounted = useRef(true)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const missing = ids.filter((id) => !asked.current.has(id))
   // After a failed load, wait for the checkbox to be turned on again rather than retrying in a loop.
   const need = on && missing.length > 0 && (state === 'idle' || state === 'ready')
 
   useEffect(() => {
+    // Starting the load flips need back to false; the result must still land, so no cleanup here.
     if (!need) return
-    let live = true
     missing.forEach((id) => asked.current.add(id))
     setState('loading')
     actions.basketLines()
       .then((rows) => {
-        if (!live) return
+        if (!mounted.current) return
         const out = {}
         for (const r of rows ?? []) {
           if (r.online || r.price == null) continue
@@ -99,11 +101,10 @@ function useMarketPrices(on, ids) {
         setState('ready')
       })
       .catch(() => {
-        if (!live) return
+        if (!mounted.current) return
         missing.forEach((id) => asked.current.delete(id))
         setState('error')
       })
-    return () => { live = false }
   }, [need])
 
   useEffect(() => { if (!on && state === 'error') setState('idle') }, [on, state])
