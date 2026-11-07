@@ -10,6 +10,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
+      // The marketing page is its own page, never the app shell.
+      workbox: { navigateFallbackDenylist: [/welcome\.html$/] },
       manifest: {
         name: 'BASKET',
         short_name: 'BASKET',
