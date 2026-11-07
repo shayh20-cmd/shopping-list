@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BASKET · רשימת קניות משותפת וסל זול יותר</title>
+<meta name="description" content="רשימת קניות אחת לכל הבית, רשימות קבועות שחוסכות זמן, והשוואת מחירים בסניפים שלידכם. מדריך מלא איך מתחילים." />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&family=Rubik:wght@500;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --surface: #ffffff;
+    --ink: #1b1d1a;
+    --muted: #5e625b;
+    --line: #e4e1d9;
+    --brand: #c4613f;
+    --brand-ink: #9c4527;
+    --brand-soft: #f8e6dc;
+    --save: #1e6b47;
+    --save-soft: #e3efe7;
+    --amber: #b86e00;
+    --radius: 20px;
+    --shadow: 0 1px 2px rgba(27, 29, 26, .06), 0 12px 32px rgba(27, 29, 26, .08);
+    --ease: cubic-bezier(.2, .8, .2, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151714; --surface: #1f221e; --ink: #f1efe9; --muted: #a9ada4; --line: #2f332d;
+      --brand: #e0825f; --brand-ink: #f0a07f; --brand-soft: #3a2419;
+      --save: #5cc08e; --save-soft: #1d3327; --amber: #e3a640;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px rgba(0, 0, 0, .35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 17px/1.6 'Heebo', system-ui, sans-serif; overflow-x: hidden; }
+  h1, h2, h3 { font-family: 'Rubik', 'Heebo', sans-serif; line-height: 1.15; margin: 0; text-wrap: balance; }
+  p { margin: 0; }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; border-radius: 8px; }
+  .wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
+  section { padding-block: 88px; }
+  .eyebrow { display: inline-block; font-weight: 700; font-size: 14px; color: var(--brand-ink); background: var(--brand-soft); padding: 4px 12px; border-radius: 999px; margin-bottom: 14px; }
+  .lead { color: var(--muted); font-size: 19px; max-width: 56ch; }
+  .section-head { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 48px; }
+  .section-head h2 { font-size: clamp(30px, 4.4vw, 46px); }
+
+  /* buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font-weight: 700; text-decoration: none; transition: transform .18s var(--ease), background .18s, box-shadow .18s; }
+  .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+  .btn:active { transform: translateY(0) scale(.98); }
+  .btn.primary { background: var(--brand); border-color: transparent; color: #fff; }
+  .btn.primary:hover { background: var(--brand-ink); }
+  @media (prefers-color-scheme: dark) { .btn.primary { color: #1b1d1a; } .btn.primary:hover { background: var(--brand-ink); } }
+
+  /* nav */
+  .nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid transparent; transition: border-color .2s; }
+  .nav.scrolled { border-bottom-color: var(--line); }
+  .nav .wrap { display: flex; align-items: center; gap: 24px; min-height: 68px; }
+  .logo { display: flex; align-items: center; gap: 10px; font: 800 20px 'Rubik', sans-serif; letter-spacing: .04em; text-decoration: none; }
+  .logo img { width: 34px; height: 34px; }
+  .nav-links { display: flex; gap: 22px; margin-inline-start: auto; }
+  .nav-links a { text-decoration: none; color: var(--muted); font-weight: 500; font-size: 16px; }
+  .nav-links a:hover { color: var(--ink); }
+  .nav .btn { min-height: 42px; padding: 0 16px; }
+  @media (max-width: 760px) { .nav-links { display: none; } .nav .btn { margin-inline-start: auto; } }
+
+  /* hero */
+  .hero { padding-block: 56px 72px; }
+  .hero .wrap { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
+  .hero h1 { font-size: clamp(38px, 6vw, 68px); letter-spacing: -.01em; }
+  .hero h1 .hl { color: var(--brand); }
+  .hero .lead { margin-top: 18px; }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+  .hero-points { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 26px; color: var(--muted); font-size: 15px; }
+  .hero-points span { display: inline-flex; align-items: center; gap: 6px; }
+  .hero-points svg { color: var(--save); flex: none; }
+  @media (max-width: 900px) { .hero .wrap { grid-template-columns: 1fr; } .hero-visual { order: 2; } }
+
+  /* phone mockup */
+  .hero-visual { position: relative; display: flex; justify-content: center; }
+  .phone { width: 290px; max-width: 100%; aspect-ratio: 9 / 18.5; border-radius: 42px; background: var(--ink); padding: 11px; box-shadow: var(--shadow), 0 40px 80px rgba(27, 29, 26, .18); position: relative; }
+  .phone::before { content: ""; position: absolute; top: 18px; left: 50%; translate: -50% 0; width: 84px; height: 22px; border-radius: 999px; background: var(--ink); z-index: 2; }
+  .screen { width: 100%; height: 100%; border-radius: 32px; background: var(--bg); overflow: hidden; display: flex; flex-direction: column; font-size: 14px; }
+  .scr-head { padding: 46px 18px 10px; }
+  .scr-sync { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--save); font-weight: 600; }
+  .scr-sync i { width: 7px; height: 7px; border-radius: 50%; background: var(--save); animation: pulse 1.8s infinite; }
+  .scr-title { font: 800 22px 'Rubik', sans-serif; margin-top: 4px; }
+  .scr-sub { color: var(--muted); font-size: 12px; }
+  .scr-card { margin: 6px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .scr-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); transition: background .3s, opacity .3s; }
+  .scr-row:last-child { border-bottom: 0; }
+  .scr-row .box { width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--line); display: grid; place-items: center; transition: background .25s, border-color .25s; flex: none; }
+  .scr-row .box svg { opacity: 0; transform: scale(.4); transition: .25s var(--ease); color: #fff; }
+  .scr-row.done .box { background: var(--save); border-color: var(--save); }
+  .scr-row.done .box svg { opacity: 1; transform: none; }
+  .scr-row.done .nm { text-decoration: line-through; color: var(--muted); }
+  .scr-row .nm { flex: 1; font-weight: 500; }
+  .scr-row .q { color: var(--muted); font-size: 12px; }
+  .scr-row.enter { animation: rowIn .45s var(--ease) both; }
+  .scr-progress { margin: 4px 18px 8px; height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
+  .scr-progress b { display: block; height: 100%; width: 0; background: var(--save); border-radius: 99px; transition: width .5s var(--ease); }
+  .scr-tabs { margin-top: auto; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); background: var(--surface); padding: 8px 4px 14px; font-size: 10px; color: var(--muted); text-align: center; }
+  .scr-tabs span.on { color: var(--save); font-weight: 700; }
+
+  .float { position: absolute; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; display: flex; align-items: center; gap: 10px; animation: bob 5s ease-in-out infinite; width: max-content; white-space: nowrap; }
+  .float b { font: 800 18px 'Rubik', sans-serif; color: var(--save); }
+  .float small { display: block; color: var(--muted); font-size: 12px; }
+  .float .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: var(--save-soft); color: var(--save); flex: none; }
+  .float.f1 { top: 14%; inset-inline-end: calc(50% + 120px); }
+  .float.f2 { bottom: 16%; inset-inline-start: calc(50% + 116px); animation-delay: -2.5s; }
+  .float.f2 .ic { background: var(--brand-soft); color: var(--brand); }
+  @media (max-width: 560px) { .float.f1 { inset-inline-end: auto; inset-inline-start: 0; top: -34px; } .float.f2 { inset-inline-start: auto; inset-inline-end: 0; bottom: 6%; } }
+
+  /* features */
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .feature { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; transition: transform .25s var(--ease), box-shadow .25s; }
+  .feature:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+  .feature .ic { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); margin-bottom: 16px; }
+  .feature:nth-child(3n+2) .ic { background: var(--save-soft); color: var(--save); }
+  .feature h3 { font-size: 20px; margin-bottom: 6px; }
+  .feature p { color: var(--muted); font-size: 16px; }
+
+  /* demo */
+  .demo { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 860px) { .demo { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  .panel h3 { font-size: 20px; margin-bottom: 4px; }
+  .panel .hint { color: var(--muted); font-size: 15px; margin-bottom: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); font-weight: 500; display: inline-flex; align-items: center; gap: 6px; transition: background .18s, border-color .18s, transform .18s var(--ease); }
+  .chip:hover { border-color: var(--brand); }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .chip[aria-pressed="true"]::before { content: "✓"; font-size: 13px; }
+  .stores { display: flex; flex-direction: column; gap: 12px; }
+  .store { display: grid; grid-template-columns: 92px 1fr auto; gap: 12px; align-items: center; }
+  .store .nm { font-weight: 700; }
+  .bar { height: 14px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+  .bar b { display: block; height: 100%; width: 0; border-radius: 99px; background: var(--line); transition: width .6s var(--ease), background .3s; }
+  .store.best .bar b { background: var(--save); }
+  .store .sum { font: 800 18px 'Rubik', sans-serif; min-width: 76px; text-align: end; font-variant-numeric: tabular-nums; }
+  .store.best .sum { color: var(--save); }
+  .verdict { margin-top: 18px; padding: 14px 16px; border-radius: 14px; background: var(--save-soft); color: var(--save); font-weight: 700; min-height: 52px; }
+  .fine { color: var(--muted); font-size: 13px; margin-top: 12px; }
+
+  .calc label { display: block; font-weight: 600; margin-top: 18px; }
+  .calc label span { float: inline-end; font: 800 18px 'Rubik', sans-serif; color: var(--ink); }
+  input[type=range] { width: 100%; accent-color: var(--brand); height: 32px; margin-top: 4px; }
+  .result { margin-top: 22px; text-align: center; padding: 22px; border-radius: 16px; background: var(--brand-soft); }
+  .result small { display: block; color: var(--brand-ink); font-weight: 600; }
+  .result strong { display: block; font: 800 clamp(40px, 7vw, 56px) 'Rubik', sans-serif; color: var(--brand-ink); font-variant-numeric: tabular-nums; }
+
+  /* guide */
+  .guide { display: grid; grid-template-columns: 300px 1fr; gap: 40px; align-items: center; }
+  @media (max-width: 860px) { .guide { grid-template-columns: 1fr; } .guide .phone { margin-inline: auto; width: 250px; } }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .tab { min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+  .tab .n { width: 24px; height: 24px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; font-size: 13px; }
+  .tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .tab[aria-selected="true"] .n { background: var(--brand); color: #fff; }
+  .step-body h3 { font-size: 26px; margin-bottom: 10px; }
+  .step-body ol { margin: 14px 0 0; padding-inline-start: 22px; display: flex; flex-direction: column; gap: 8px; }
+  .step-body li::marker { color: var(--brand); font-weight: 800; }
+  .step-body .tip { margin-top: 16px; padding: 12px 14px; border-inline-start: 4px solid var(--save); background: var(--save-soft); border-radius: 10px; font-size: 15px; }
+  .os { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 4px; margin-top: 12px; }
+  .os button { min-height: 40px; padding: 0 16px; border: 0; border-radius: 9px; background: transparent; font-weight: 600; }
+  .os button[aria-pressed="true"] { background: var(--surface); box-shadow: var(--shadow); }
+  .fade { animation: fadeUp .4s var(--ease) both; }
+  .mock-pill { display: inline-block; padding: 4px 10px; border-radius: 99px; background: var(--save-soft); color: var(--save); font-size: 11px; font-weight: 700; margin: 0 18px; }
+  .mock-seg { margin: 6px 12px; display: grid; grid-template-columns: 1fr 1fr; background: var(--line); border-radius: 10px; padding: 3px; font-size: 12px; text-align: center; }
+  .mock-seg span { padding: 6px; border-radius: 8px; }
+  .mock-seg span.on { background: var(--surface); font-weight: 700; }
+  .mock-btn { margin: 8px 12px; padding: 10px; border-radius: 12px; background: var(--save); color: #fff; text-align: center; font-weight: 700; font-size: 13px; }
+  .mock-code { margin: 8px 12px; display: flex; gap: 6px; justify-content: center; direction: ltr; }
+  .mock-code span { width: 30px; height: 38px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; font: 800 18px 'Rubik', sans-serif; }
+  .mock-scan { margin: 8px 12px; aspect-ratio: 4/3; border-radius: 14px; background: #111; position: relative; overflow: hidden; }
+  .mock-scan::before { content: ""; position: absolute; inset: 28% 14%; border: 3px solid rgba(255,255,255,.85); border-radius: 10px; }
+  .mock-scan::after { content: ""; position: absolute; inset-inline: 16%; height: 2px; top: 30%; background: #ff6a4a; box-shadow: 0 0 12px #ff6a4a; animation: scanline 2s ease-in-out infinite alternate; }
+  .mock-bars { position: absolute; inset: 38% 26%; background: repeating-linear-gradient(90deg, #fff 0 3px, transparent 3px 5px, #fff 5px 6px, transparent 6px 10px); opacity: .9; }
+
+  /* tips */
+  .tips { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; counter-reset: tip; }
+  .tipc { padding: 24px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); position: relative; }
+  .tipc::before { counter-increment: tip; content: counter(tip); position: absolute; top: 18px; inset-inline-end: 20px; font: 800 44px 'Rubik', sans-serif; color: var(--brand-soft); }
+  @media (prefers-color-scheme: dark) { .tipc::before { color: var(--line); } }
+  .tipc h3 { font-size: 19px; margin-bottom: 6px; max-width: 80%; }
+  .tipc p { color: var(--muted); font-size: 16px; }
+
+  /* faq */
+  .faq { max-width: 780px; margin-inline: auto; display: flex; flex-direction: column; gap: 10px; }
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 0 20px; transition: box-shadow .2s; }
+  details[open] { box-shadow: var(--shadow); }
+  summary { list-style: none; cursor: pointer; min-height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 700; font-size: 18px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font: 500 26px 'Rubik', sans-serif; color: var(--brand); transition: transform .25s var(--ease); }
+  details[open] summary::after { transform: rotate(45deg); }
+  details p { padding-bottom: 18px; color: var(--muted); }
+
+  /* cta */
+  .cta { text-align: center; background: var(--ink); color: var(--bg); border-radius: 32px; padding: 64px 24px; position: relative; overflow: hidden; }
+  .cta h2 { font-size: clamp(30px, 5vw, 50px); }
+  .cta p { color: color-mix(in srgb, var(--bg) 75%, transparent); margin: 14px auto 28px; max-width: 48ch; }
+  .cta .btn { border-color: transparent; }
+  .cta .btn.ghost { background: transparent; color: var(--bg); border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent); }
+  .cta .ring { position: absolute; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--brand) 40%, transparent); animation: spin 30s linear infinite; pointer-events: none; }
+  footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; text-align: center; }
+
+  /* reveal */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s var(--ease), transform .6s var(--ease); transition-delay: var(--d, 0s); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  @keyframes rowIn { from { opacity: 0; transform: translateY(-8px); background: var(--save-soft); } to { opacity: 1; transform: none; } }
+  @keyframes bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -10px; } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @keyframes scanline { from { top: 30%; } to { top: 68%; } }
+  @keyframes spin { to { rotate: 360deg; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    html { scroll-behavior: auto; }
+    .reveal { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></g></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V4h3M18 4h3v3M21 17v3h-3M6 20H3v-3M7 8v8M10 8v8M13 8v8M16 8v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></g></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.4a5 5 0 0 1 7 0M12 20h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4h14v12H1zM15 9h4l4 4v3h-8"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></g></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.5-1-1.7-1.5-3-1.5-1.7 0-3 .9-3 2s1.3 1.7 3 2 3 .9 3 2-1.3 2-3 2c-1.3 0-2.5-.5-3-1.5M12 6v2M12 16v2"/></g></symbol>
+  </defs>
+</svg>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="logo" href="#top"><img src="icon.svg" alt="" />BASKET</a>
+    <nav class="nav-links" aria-label="ניווט בעמוד">
+      <a href="#features">מה יש בפנים</a>
+      <a href="#save">כמה חוסכים</a>
+      <a href="#guide">מדריך</a>
+      <a href="#faq">שאלות</a>
+    </nav>
+    <a class="btn primary" href="./">פתחו את BASKET</a>
+  </div>
+</header>
+
+<main id="top">
+  <!-- hero -->
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow reveal">רשימת קניות משותפת לכל הבית</span>
+        <h1 class="reveal" style="--d:.05s">רשימה אחת לכולם.<br /><span class="hl">סל זול יותר</span> בכל קנייה.</h1>
+        <p class="lead reveal" style="--d:.12s">BASKET מחברת את כל בני הבית לרשימה אחת שמתעדכנת בזמן אמת, חוסכת את ההקלדה עם רשימות קבועות, ומראה באיזה סניף לידכם הסל שלכם הכי זול.</p>
+        <div class="hero-cta reveal" style="--d:.18s">
+          <a class="btn primary" href="./">מתחילים עכשיו</a>
+          <a class="btn" href="#guide">איך זה עובד</a>
+        </div>
+        <div class="hero-points reveal" style="--d:.24s">
+          <span><svg width="16" height="16"><use href="#i-check"/></svg>בלי חנות אפליקציות</span>
+          <span><svg width="16" height="16"><use href="#i-check"/></svg>אייפון ואנדרואיד</span>
+          <span><svg width="16" height="16"><use href="#i-check"/></svg>מחירים מהרשתות, כל בוקר</span>
+        </div>
+      </div>
+
+      <div class="hero-visual reveal" style="--d:.1s">
+        <div class="phone" aria-label="הדגמה: רשימת קניות שמסומנת בזמן אמת" role="img">
+          <div class="screen">
+            <div class="scr-head">
+              <span class="scr-sync"><i></i>מסונכרן</span>
+              <div class="scr-title">סופר</div>
+              <div class="scr-sub" id="heroCount">6 פריטים לקנייה</div>
+            </div>
+            <div class="scr-progress"><b id="heroBar"></b></div>
+            <div class="scr-card" id="heroList"></div>
+            <div class="scr-tabs"><span class="on">רשימה</span><span>קטלוג</span><span>איפה זול</span><span>הגדרות</span></div>
+          </div>
+        </div>
+        <div class="float f1" aria-hidden="true">
+          <span class="ic"><svg width="20" height="20"><use href="#i-coin"/></svg></span>
+          <span><small>הסל הכי זול באזור</small><b id="heroSave">חיסכון של ₪38</b></span>
+        </div>
+        <div class="float f2" aria-hidden="true">
+          <span class="ic"><svg width="20" height="20"><use href="#i-users"/></svg></span>
+          <span><small>נוסף עכשיו מהטלפון השני</small><strong id="heroAdded">חלב</strong></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- features -->
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">מה יש בפנים</span>
+        <h2>כל מה שצריך כדי לקנות פחות זמן ופחות כסף</h2>
+        <p class="lead">מהבית, בסופר ואחרי הקנייה. בלי לרוץ בין אפליקציות.</p>
+      </div>
+      <div class="features">
+        <article class="feature reveal"><div class="ic"><svg width="24" height="24"><use href="#i-users"/></svg></div><h3>רשימה משותפת בזמן אמת</h3><p>מוסיפים בבית, מסמנים בסופר. כל שינוי מופיע מיד בטלפון של כל בני הבית.</p></article>
+        <article class="feature reveal" style="--d:.06s"><div class="ic"><svg width="24" height="24"><use href="#i-list"/></svg></div><h3>רשימות קבועות</h3><p>"בסיס שבועי", "שבת", "טיול". בוחרים רשימה קבועה, מוסיפים מה שחסר השבוע, והרשימה המקורית לא משתנה.</p></article>
+        <article class="feature reveal" style="--d:.12s"><div class="ic"><svg width="24" height="24"><use href="#i-pin"/></svg></div><h3>איפה הכי זול</h3><p>הסל המלא שלכם מתומחר בכל סניף ברדיוס שבחרתם, מהזול ליקר, כולל חנויות אונליין ודמי משלוח.</p></article>
+        <article class="feature reveal"><div class="ic"><svg width="24" height="24"><use href="#i-scan"/></svg></div><h3>סריקת ברקוד בסופר</h3><p>מכוונים את המצלמה למוצר ורואים כמה הוא עולה בסניפים אחרים לידכם. שווה לקנות כאן, או לחכות?</p></article>
+        <article class="feature reveal" style="--d:.06s"><div class="ic"><svg width="24" height="24"><use href="#i-tag"/></svg></div><h3>המוצר המדויק</h3><p>יוגורט זה לא סתם יוגורט. בוחרים את המותג והגודל שאתם קונים, וההשוואה נעשית על המוצר הזה בדיוק.</p></article>
+        <article class="feature reveal" style="--d:.12s"><div class="ic"><svg width="24" height="24"><use href="#i-clock"/></svg></div><h3>היסטוריית קניות</h3><p>בסוף כל קנייה שומרים איפה קניתם וכמה שילמתם, ורואים לאורך זמן לאן הולך הכסף.</p></article>
+        <article class="feature reveal"><div class="ic"><svg width="24" height="24"><use href="#i-wifi"/></svg></div><h3>עובד גם בלי קליטה</h3><p>במרתף של הסופר אין רשת? ממשיכים לסמן. השינויים נשמרים ונשלחים כשהחיבור חוזר.</p></article>
+        <article class="feature reveal" style="--d:.06s"><div class="ic"><svg width="24" height="24"><use href="#i-truck"/></svg></div><h3>אונליין מול סניף</h3><p>משלוח הביתה מול נסיעה לסניף: רואים את שני המחירים זה לצד זה, עם דמי המשלוח של הרשת.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- savings -->
+  <section id="save">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">כמה חוסכים</span>
+        <h2>אותו סל, מחיר אחר בכל סניף</h2>
+        <p class="lead">המחירים בין סניפים שונים, גם באותה שכונה. נסו: בחרו מוצרים לסל וראו איך ההשוואה עובדת.</p>
+      </div>
+      <div class="demo">
+        <div class="panel reveal">
+          <h3>הסל שלכם</h3>
+          <p class="hint">לחצו על מוצרים כדי להוסיף או להוריד.</p>
+          <div class="chips" id="demoChips"></div>
+          <div class="stores" id="demoStores" style="margin-top:24px"></div>
+          <div class="verdict" id="demoVerdict" aria-live="polite"></div>
+          <p class="fine">סניפים ומחירים לדוגמה בלבד. באפליקציה המחירים מגיעים מקבצי המחירים שהרשתות מפרסמות כל בוקר, לסניפים שלידכם.</p>
+        </div>
+        <div class="panel calc reveal" style="--d:.08s">
+          <h3>מחשבון חיסכון</h3>
+          <p class="hint">הזיזו את המחוונים לפי הבית שלכם.</p>
+          <label for="spend">הוצאה חודשית על סופר <span id="spendOut"></span></label>
+          <input type="range" id="spend" min="500" max="6000" step="100" value="2500" />
+          <label for="gap">פער בין הסניף הרגיל לזול באזור <span id="gapOut"></span></label>
+          <input type="range" id="gap" min="2" max="20" step="1" value="8" />
+          <div class="result" aria-live="polite">
+            <small>חיסכון משוער בשנה</small>
+            <strong id="yearOut">₪0</strong>
+            <small id="monthOut"></small>
+          </div>
+          <p class="fine">הערכה בלבד. הפער האמיתי תלוי באזור, בסל ובמבצעים, ואת הפער באזור שלכם תראו בלשונית "איפה זול".</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- guide -->
+  <section id="guide">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">מדריך</span>
+        <h2>מתחילים בחמש דקות</h2>
+        <p class="lead">שישה צעדים מההתקנה ועד הקנייה הזולה הראשונה.</p>
+      </div>
+      <div class="guide reveal">
+        <div class="phone" aria-hidden="true"><div class="screen" id="guideScreen"></div></div>
+        <div>
+          <div class="tabs" role="tablist" aria-label="שלבי המדריך" id="guideTabs"></div>
+          <div class="step-body" id="guideBody" role="tabpanel" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- tips -->
+  <section id="tips">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">טיפים לחיסכון</span>
+        <h2>ככה מוציאים מ-BASKET את המקסימום</h2>
+      </div>
+      <div class="tips">
+        <article class="tipc reveal"><h3>בחרו מוצר מדויק למוצרים שחוזרים</h3><p>חלב, קפה, חיתולים. סמל התגית ליד המוצר מצמיד אותו למותג ולגודל, וההשוואה בין הסניפים נעשית על המוצר הזה בדיוק.</p></article>
+        <article class="tipc reveal" style="--d:.06s"><h3>בנו רשימה קבועה אחת טובה</h3><p>רוב הקנייה השבועית חוזרת על עצמה. רשימה קבועה חוסכת את ההקלדה, ומשאירה מקום רק למה שמשתנה השבוע.</p></article>
+        <article class="tipc reveal" style="--d:.12s"><h3>בדקו את "איפה זול" לפני שיוצאים</h3><p>בדיקה של שנייה לפני הנסיעה מראה אם הסניף הרגיל באמת הזול, או שסניף במרחק שתי דקות זול יותר.</p></article>
+        <article class="tipc reveal"><h3>סרקו מוצרים יקרים בסופר</h3><p>לפני שמכניסים לעגלה משהו יקר, סורקים את הברקוד ורואים כמה הוא עולה בסניפים האחרים.</p></article>
+        <article class="tipc reveal" style="--d:.06s"><h3>שווה להרחיב את הרדיוס</h3><p>בהגדרות קובעים את מרחק החיפוש. לפעמים עוד שני קילומטרים מוסיפים סניף זול בהרבה.</p></article>
+        <article class="tipc reveal" style="--d:.12s"><h3>שמרו קניות בהיסטוריה</h3><p>כשמסיימים קנייה, רושמים כמה שילמתם. אחרי כמה שבועות כבר רואים מגמה, ויודעים איפה הכי משתלם לכם.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- faq -->
+  <section id="faq">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">שאלות</span>
+        <h2>שאלות נפוצות</h2>
+      </div>
+      <div class="faq">
+        <details class="reveal"><summary>צריך להוריד משהו מחנות האפליקציות?</summary><p>לא. פותחים את הקישור בדפדפן ומוסיפים למסך הבית. באייפון דרך Safari: שיתוף, ואז "הוספה למסך הבית". באנדרואיד דרך Chrome: התפריט, ואז "התקנת האפליקציה". מאותו רגע היא נפתחת כמו כל אפליקציה.</p></details>
+        <details class="reveal"><summary>מאיפה מגיעים המחירים?</summary><p>מקבצי המחירים שרשתות השיווק מחויבות לפרסם לפי חוק שקיפות המחירים. BASKET טוענת אותם כל בוקר לסניפים שבאזור שבחרתם, ומשווה אליהם את הסל שלכם.</p></details>
+        <details class="reveal"><summary>המבצעים נכללים בהשוואה?</summary><p>עדיין לא. ההשוואה היא לפי המחיר הרגיל של כל סניף, ודמי המשלוח הם המחיר שהרשת מפרסמת. מבצע בסופר יכול להוריד את המחיר עוד.</p></details>
+        <details class="reveal"><summary>איך מצרפים את בן או בת הזוג?</summary><p>בהגדרות מופיע קוד הזמנה. מי שמצטרף נכנס לאפליקציה, בוחר "הצטרפות לבית קיים" ומקליד את הקוד. מאותו רגע יש לכם רשימה אחת משותפת.</p></details>
+        <details class="reveal"><summary>מה קורה לנתונים אם מוחקים את האפליקציה מהטלפון?</summary><p>שום דבר. הרשימות, הקטלוג וההיסטוריה שמורים בחשבון. מתקינים שוב, מתחברים עם אותו מייל, וכל הנתונים שם. מי שרוצה למחוק את החשבון לגמרי עושה את זה בהגדרות.</p></details>
+        <details class="reveal"><summary>איך מתחברים?</summary><p>עם המייל. מקלידים כתובת, מקבלים קוד בן 6 ספרות ומקלידים אותו באפליקציה. אין סיסמה לזכור.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:24px">
+    <div class="wrap">
+      <div class="cta reveal">
+        <span class="ring" style="width:520px;height:520px;top:-300px;inset-inline-start:-180px" aria-hidden="true"></span>
+        <span class="ring" style="width:380px;height:380px;bottom:-240px;inset-inline-end:-120px;animation-direction:reverse" aria-hidden="true"></span>
+        <h2>הקנייה הבאה כבר יכולה להיות זולה יותר</h2>
+        <p>פותחים את הקישור, מוסיפים למסך הבית, ומזמינים את כל הבית לרשימה אחת.</p>
+        <div class="hero-cta" style="justify-content:center">
+          <a class="btn primary" href="./">פתחו את BASKET</a>
+          <button class="btn ghost" type="button" id="shareBtn">שתפו עם מישהו מהבית</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap">BASKET · Same Shopping. Smarter Choices.</div></footer>
+
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const $ = (id) => document.getElementById(id)
+  const shekel = (n) => '₪' + Math.round(n).toLocaleString('he-IL')
+  const check = '<svg width="12" height="12"><use href="#i-check"/></svg>'
+
+  // Sticky nav border once the page scrolls.
+  addEventListener('scroll', () => $('nav').classList.toggle('scrolled', scrollY > 8), { passive: true })
+
+  // Reveal on scroll.
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target) }
+  }, { threshold: .12 })
+  document.querySelectorAll('.reveal').forEach((el) => io.observe(el))
+
+  // Hero phone: items arrive, then get checked off, then the trip starts again.
+  const heroItems = [['חלב', '2'], ['ביצים', '1'], ['עגבניות', '1 ק"ג'], ['לחם', '1'], ['יוגורט', '4'], ['בננות', '2 ק"ג']]
+  const list = $('heroList')
+  function renderHero(shown, done) {
+    list.innerHTML = heroItems.slice(0, shown).map(([n, q], i) =>
+      `<div class="scr-row ${i < done ? 'done' : ''} ${i === shown - 1 && done === 0 ? 'enter' : ''}"><span class="box">${check}</span><span class="nm">${n}</span><span class="q">${q}</span></div>`).join('')
+    $('heroCount').textContent = `${shown - done} פריטים לקנייה`
+    $('heroBar').style.width = shown ? `${(done / shown) * 100}%` : '0'
+  }
+  if (reduce) renderHero(6, 2)
+  else {
+    let shown = 0, done = 0
+    const tick = () => {
+      if (shown < heroItems.length) { shown++; $('heroAdded').textContent = heroItems[shown - 1][0] }
+      else if (done < shown) done++
+      else { shown = 0; done = 0 }
+      renderHero(shown, done)
+      setTimeout(tick, shown === 0 ? 600 : done ? 900 : 1100)
+    }
+    tick()
+  }
+
+  // Basket demo: three example stores price the chosen items.
+  const products = [
+    ['חלב', [6.9, 6.2, 7.4]], ['ביצים', [14.9, 12.9, 13.5]], ['לחם', [8.5, 7.9, 9.9]], ['קוטג׳', [6.4, 5.9, 6.9]],
+    ['עוף', [39.9, 34.9, 42.0]], ['קפה', [29.9, 32.5, 26.9]], ['חיתולים', [49.9, 44.9, 54.9]], ['שמן זית', [39.9, 35.9, 37.5]],
+    ['עגבניות', [8.9, 6.9, 9.9]], ['במבה', [5.9, 4.9, 6.5]],
+  ]
+  const stores = ['סניף א׳', 'סניף ב׳', 'סניף ג׳']
+  const chosen = new Set(['חלב', 'ביצים', 'לחם', 'עוף', 'חיתולים', 'עגבניות'])
+  const chips = $('demoChips')
+  chips.innerHTML = products.map(([n]) => `<button class="chip" type="button" aria-pressed="${chosen.has(n)}" data-n="${n}">${n}</button>`).join('')
+  $('demoStores').innerHTML = stores.map((s, i) =>
+    `<div class="store" data-i="${i}"><span class="nm">${s}</span><span class="bar"><b></b></span><span class="sum">₪0</span></div>`).join('')
+  chips.addEventListener('click', (e) => {
+    const b = e.target.closest('.chip'); if (!b) return
+    const n = b.dataset.n
+    chosen.has(n) ? chosen.delete(n) : chosen.add(n)
+    b.setAttribute('aria-pressed', chosen.has(n))
+    priceDemo()
+  })
+  function priceDemo() {
+    const totals = stores.map((_, i) => products.filter(([n]) => chosen.has(n)).reduce((s, [, p]) => s + p[i], 0))
+    const max = Math.max(...totals, 1), min = Math.min(...totals), best = totals.indexOf(min)
+    document.querySelectorAll('#demoStores .store').forEach((row, i) => {
+      row.classList.toggle('best', chosen.size > 0 && i === best)
+      row.querySelector('b').style.width = `${(totals[i] / max) * 100}%`
+      animateNum(row.querySelector('.sum'), totals[i], (v) => '₪' + v.toFixed(2))
+    })
+    $('demoVerdict').textContent = chosen.size
+      ? `${stores[best]} זול ב-${shekel(max - min)} מהיקר. על אותו סל בדיוק.`
+      : 'בחרו כמה מוצרים כדי להשוות.'
+    $('heroSave').textContent = `חיסכון של ${shekel(Math.max(max - min, 1))}`
+  }
+
+  // Savings calculator.
+  const spend = $('spend'), gap = $('gap')
+  function calc() {
+    const m = spend.value * gap.value / 100
+    $('spendOut').textContent = shekel(spend.value)
+    $('gapOut').textContent = `${gap.value}%`
+    animateNum($('yearOut'), m * 12, shekel)
+    $('monthOut').textContent = `בערך ${shekel(m)} בחודש`
+  }
+  spend.addEventListener('input', calc)
+  gap.addEventListener('input', calc)
+
+  const running = new WeakMap()
+  function animateNum(el, to, fmt) {
+    const from = running.get(el)?.value ?? 0
+    if (reduce) { el.textContent = fmt(to); running.set(el, { value: to }); return }
+    const start = performance.now(), dur = 500
+    const state = { value: from }
+    running.set(el, state)
+    const step = (t) => {
+      if (running.get(el) !== state) return
+      const k = Math.min(1, (t - start) / dur), e = 1 - Math.pow(1 - k, 3)
+      state.value = from + (to - from) * e
+      el.textContent = fmt(state.value)
+      if (k < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }
+
+  // Guide: six steps, each with its own phone screen.
+  const row = (n, q, done) => `<div class="scr-row ${done ? 'done' : ''}"><span class="box">${check}</span><span class="nm">${n}</span><span class="q">${q ?? ''}</span></div>`
+  const head = (title, sub) => `<div class="scr-head"><span class="scr-sync"><i></i>מסונכרן</span><div class="scr-title">${title}</div><div class="scr-sub">${sub}</div></div>`
+  const tabs = (on) => `<div class="scr-tabs">${['רשימה', 'קטלוג', 'איפה זול', 'הגדרות'].map((t, i) => `<span class="${i === on ? 'on' : ''}">${t}</span>`).join('')}</div>`
+  let os = /android/i.test(navigator.userAgent) ? 'android' : 'iphone'
+  const steps = [
+    {
+      t: 'התקנה',
+      body: () => `<h3>מוסיפים את BASKET למסך הבית</h3>
+        <p>אין צורך בחנות אפליקציות. בוחרים את סוג הטלפון:</p>
+        <div class="os" role="group" aria-label="סוג טלפון"><button type="button" data-os="iphone" aria-pressed="${os === 'iphone'}">אייפון</button><button type="button" data-os="android" aria-pressed="${os === 'android'}">אנדרואיד</button></div>
+        ${os === 'iphone'
+          ? `<ol><li>פותחים את הקישור ב-<b>Safari</b> (דווקא בו, לא בדפדפן אחר).</li><li>לוחצים על כפתור השיתוף, הריבוע עם החץ למעלה.</li><li>בוחרים <b>"הוספה למסך הבית"</b> ואז "הוספה".</li><li>פותחים את BASKET מהאייקון החדש, ומשם תמיד.</li></ol>`
+          : `<ol><li>פותחים את הקישור ב-<b>Chrome</b>.</li><li>לוחצים על שלוש הנקודות למעלה.</li><li>בוחרים <b>"התקנת האפליקציה"</b> או "הוספה למסך הבית".</li><li>פותחים את BASKET מהאייקון החדש.</li></ol>`}
+        <div class="tip">כדאי להתחבר מתוך האייקון במסך הבית, לא מתוך הדפדפן. כך נשארים מחוברים.</div>`,
+      screen: () => `<div class="scr-head"><div class="scr-title">BASKET</div><div class="scr-sub">רשימה אחת לכל הבית</div></div>
+        <div class="scr-card" style="padding:14px;text-align:center"><div style="font-weight:700;margin-bottom:6px">הוספה למסך הבית</div><div style="color:var(--muted);font-size:12px">האייקון יופיע ליד שאר האפליקציות</div></div>
+        <div style="display:flex;justify-content:center;margin-top:18px"><img src="icon.svg" alt="" width="64" height="64" style="border-radius:16px;box-shadow:var(--shadow)"></div>`,
+    },
+    {
+      t: 'כניסה',
+      body: () => `<h3>נכנסים עם המייל, בלי סיסמה</h3>
+        <ol><li>מקלידים את כתובת המייל ולוחצים <b>"שלחו לי קוד"</b>.</li><li>במייל מגיע קוד בן 6 ספרות.</li><li>מקלידים את הקוד באפליקציה, בלי לצאת ממנה.</li></ol>
+        <div class="tip">הקוד לא מגיע? בודקים בתיקיית הספאם, ואפשר לבקש קוד חדש.</div>`,
+      screen: () => `<div class="scr-head"><div class="scr-title">כניסה</div><div class="scr-sub">הקוד נשלח למייל שלכם</div></div>
+        <div class="mock-code"><span>4</span><span>8</span><span>2</span><span>1</span><span>9</span><span>6</span></div><div class="mock-btn">כניסה</div>`,
+    },
+    {
+      t: 'בית משותף',
+      body: () => `<h3>פותחים בית ומזמינים את כולם</h3>
+        <ol><li>בכניסה הראשונה יוצרים בית חדש ונותנים לו שם.</li><li>בלשונית <b>הגדרות</b> מופיע קוד ההזמנה של הבית.</li><li>שולחים את הקישור ואת הקוד לבן או בת הזוג.</li><li>הם נכנסים, בוחרים <b>"הצטרפות לבית קיים"</b> ומקלידים את הקוד.</li></ol>
+        <div class="tip">מאותו רגע יש לכם רשימה אחת. כל מה שמישהו מוסיף מופיע אצל כולם.</div>`,
+      screen: () => `${head('הגדרות', 'הבית שלנו')}<div class="scr-card" style="padding:14px"><div style="font-weight:700">משתמשים בבית</div><div style="color:var(--muted);font-size:12px;margin:6px 0">קוד הצטרפות:</div><div style="font:800 26px Rubik,sans-serif;letter-spacing:.2em;text-align:center;direction:ltr">K7Q2XM</div></div>${tabs(3)}`,
+    },
+    {
+      t: 'רשימה קבועה',
+      body: () => `<h3>רשימה קבועה: פעם אחת, לכל השבועות</h3>
+        <ol><li>נכנסים ל<b>קטלוג</b>, ובוחרים <b>"רשימות קבועות"</b>.</li><li>נותנים שם, למשל "בסיס שבועי", ולוחצים "צור".</li><li>בוחרים את המוצרים והכמויות שחוזרים כל שבוע, ולוחצים "סיום".</li></ol>
+        <div class="tip">בקטלוג אפשר גם לבחור מוצר מדויק, כולל מותג וגודל, בסמל התגית שליד כל מוצר.</div>`,
+      screen: () => `<div class="scr-head"><div class="scr-title">קטלוג</div><div class="scr-sub">רשימות קבועות</div></div>
+        <div class="scr-card">${row('בסיס שבועי', '18 פריטים')}${row('שבת', '9 פריטים')}${row('טיול', '6 פריטים')}</div>${tabs(1)}`,
+    },
+    {
+      t: 'קנייה',
+      body: () => `<h3>מכינים קנייה ויוצאים לסופר</h3>
+        <ol><li>בעמוד <b>רשימה</b> בוחרים <b>"רשימה מהירה"</b>, או אחת הרשימות הקבועות.</li><li>מוסיפים ומורידים מה שצריך השבוע. הרשימה הקבועה לא משתנה.</li><li>בסופר עוברים ל<b>"קנייה"</b> ומסמנים כל מה שנכנס לעגלה.</li><li>בסוף לוחצים <b>"סיימתי קנייה"</b> ושומרים איפה קניתם וכמה שילמתם.</li></ol>`,
+      screen: () => `${head('סופר', 'מבוסס על: בסיס שבועי')}<div class="mock-seg"><span>עריכה</span><span class="on">קנייה</span></div>
+        <div class="scr-card">${row('חלב', '2', true)}${row('ביצים', '1', true)}${row('לחם', '1')}${row('עגבניות', '1 ק"ג')}</div><div class="mock-btn">סיימתי קנייה</div>${tabs(0)}`,
+    },
+    {
+      t: 'חיסכון',
+      body: () => `<h3>בודקים איפה זול, וסורקים בסופר</h3>
+        <ol><li>בהגדרות קובעים מיקום ורדיוס חיפוש, פעם אחת.</li><li>בלשונית <b>"איפה זול"</b> רואים את הסל המלא בכל סניף באזור ובאונליין, מהזול ליקר.</li><li>בסופר לוחצים <b>"סרוק ברקוד"</b> ורואים כמה המוצר עולה בסניפים האחרים.</li></ol>
+        <div class="tip">המחירים מתעדכנים כל בוקר מקבצי הרשתות. מבצעים עוד לא נכללים בהשוואה.</div>`,
+      screen: () => `${head('איפה הכי זול', '14 פריטים · רדיוס 5 ק"מ')}<div class="mock-scan"><span class="mock-bars"></span></div>
+        <div class="scr-card">${row('סניף ב׳ · 1.2 ק"מ', '₪186')}${row('סניף א׳ · 0.8 ק"מ', '₪214')}</div>${tabs(2)}`,
+    },
+  ]
+  let current = 0
+  const tabBox = $('guideTabs')
+  tabBox.innerHTML = steps.map((s, i) => `<button class="tab" role="tab" id="gt${i}" aria-controls="guideBody" type="button" data-i="${i}"><span class="n">${i + 1}</span>${s.t}</button>`).join('')
+  function show(i, focus) {
+    current = i
+    tabBox.querySelectorAll('.tab').forEach((b, k) => { b.setAttribute('aria-selected', k === i); b.tabIndex = k === i ? 0 : -1 })
+    const body = $('guideBody'), scr = $('guideScreen')
+    body.setAttribute('aria-labelledby', `gt${i}`)
+    body.innerHTML = steps[i].body()
+    scr.innerHTML = steps[i].screen()
+    for (const el of [body, scr]) { el.classList.remove('fade'); void el.offsetWidth; el.classList.add('fade') }
+    if (focus) tabBox.children[i].focus()
+  }
+  tabBox.addEventListener('click', (e) => { const b = e.target.closest('.tab'); if (b) show(+b.dataset.i) })
+  tabBox.addEventListener('keydown', (e) => {
+    // RTL: the left arrow moves forward.
+    const d = { ArrowLeft: 1, ArrowRight: -1, Home: -current, End: steps.length - 1 - current }[e.key]
+    if (d === undefined) return
+    e.preventDefault()
+    show((current + d + steps.length) % steps.length, true)
+  })
+  $('guideBody').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-os]'); if (!b) return
+    os = b.dataset.os
+    show(current)
+  })
+
+  // Share the app link (falls back to copying it).
+  $('shareBtn').addEventListener('click', async () => {
+    const url = new URL('./', location.href).href
+    const btn = $('shareBtn')
+    try {
+      if (navigator.share) await navigator.share({ title: 'BASKET', text: 'רשימת קניות משותפת לבית שלנו', url })
+      else { await navigator.clipboard.writeText(url); btn.textContent = 'הקישור הועתק' }
+    } catch { /* the share sheet was closed */ }
+  })
+
+  priceDemo()
+  calc()
+  show(0)
+})()
+</script>
+</body>
+</html>
