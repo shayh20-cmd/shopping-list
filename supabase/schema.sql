@@ -32,7 +32,9 @@ create table if not exists lists (
   kind text not null default 'grocery' check (kind in ('grocery', 'general', 'fixed')),
   tag text,
   based_on uuid[] not null default '{}',
-  created_at timestamptz not null default now()
+  created_by text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists list_items (
