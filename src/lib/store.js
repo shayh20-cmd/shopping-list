@@ -439,6 +439,12 @@ export const actions = {
     })
   },
 
+  // The code from the same email. An iPhone home-screen app cannot receive the link (it opens
+  // in Safari, whose sign-in the app does not share), so the code is typed in the app instead.
+  async verifyEmailCode(email, token) {
+    return supabase.auth.verifyOtp({ email, token, type: 'email' })
+  },
+
   async signOut() {
     await supabase.auth.signOut()
     queue = []
