@@ -1,8 +1,10 @@
-/* BASKET launch screen. Terracotta ground, cream line art. */
+/* BASKET launch screen. Terracotta ground, cream line art.
+   Timeline (s): 0.05–1.15 three fly-bys · 1.15–1.70 the cart drives in · 1.70–2.15 brake squash
+   · 2.00 ASKET · 2.40 motto · 2.70 enter button · 2.90 credit. Stays until the button is pressed. */
 .splash {
   --sp-bg: #d97757;
   --sp-ink: #faf9f5;
-  position: fixed; inset: 0; z-index: 100;
+  position: fixed; inset: 0; z-index: 100; overflow: hidden;
   background: var(--sp-bg); color: var(--sp-ink);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding-bottom: 8vh;
@@ -11,43 +13,133 @@
 }
 .splash.out { opacity: 0; pointer-events: none; }
 
-.splash-art { position: relative; width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; }
-.splash-art > svg:first-of-type { position: relative; }
-.splash-halo {
-  position: absolute; inset: 0; border-radius: 50%; background: rgba(250, 249, 245, .12);
-  opacity: 0; transform: scale(.7); animation: sp-halo 1s cubic-bezier(.3, 1.2, .5, 1) .1s forwards;
+/* ---- Fly-bys ---- */
+.sp-sky { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.sp-fly {
+  position: absolute; left: 0; top: 0;
+  animation: sp-fly var(--t) cubic-bezier(.4, .1, .6, .9) var(--d) both;
 }
-.sp-star { position: absolute; }
-.sp-star.big { top: 22px; left: 30px; width: 22px; height: 22px; }
-.sp-star.small { top: 58px; left: 12px; width: 12px; height: 12px; }
+.sp-fly.rtl { animation-name: sp-fly-rtl; }
+.sp-fly-body { position: relative; width: calc(var(--s) * 110px); transform: skewX(-10deg); }
+.sp-fly.rtl .sp-fly-body { transform: scaleX(-1) skewX(-10deg); }
+.sp-cart { display: block; width: 100%; height: auto; overflow: visible; animation: sp-jolt .1s steps(2) infinite; }
+.sp-trail { position: absolute; right: 82%; bottom: 4%; width: 210%; height: auto; overflow: visible; }
 
-.splash-name { margin: 28px 0 0; line-height: 0; direction: ltr; }
-.splash-name svg { width: 250px; height: auto; overflow: visible; }
-.splash-name text { font-family: 'Rubik', system-ui, sans-serif; font-weight: 700; font-size: 1000px; }
-.splash-motto { margin: 16px 0 0; direction: ltr; font-size: 17px; font-weight: 400; letter-spacing: .4px; }
-.splash-motto b { font-weight: 700; }
+@keyframes sp-fly {
+  from { transform: translate(-180px, var(--y0)) rotate(var(--r)); }
+  99% { opacity: 1; }
+  to { transform: translate(calc(100vw + 340px), var(--y1)) rotate(var(--r)); opacity: 0; }
+}
+@keyframes sp-fly-rtl {
+  from { transform: translate(calc(100vw + 20px), var(--y0)) rotate(var(--r)); }
+  99% { opacity: 1; }
+  to { transform: translate(-480px, var(--y1)) rotate(var(--r)); opacity: 0; }
+}
+@keyframes sp-jolt { to { transform: translateY(-2%); } }
 
-.sp-draw path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: sp-draw 1s cubic-bezier(.6, .1, .3, 1) var(--d, 0s) forwards; }
-.sp-drop { opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; animation: sp-drop .7s cubic-bezier(.3, 1.5, .5, 1) var(--d, 0s) forwards; }
-.sp-ltr { display: inline-block; opacity: 0; transform-box: fill-box; animation: sp-rise .6s cubic-bezier(.2, 1.3, .4, 1) var(--d, 0s) forwards; }
-.sp-fade { opacity: 0; animation: sp-fade .7s ease var(--d, 0s) forwards; }
-.sp-star {
+/* Speed lines flow backwards; dust puffs swell and fall behind. */
+.sp-streak { stroke-dasharray: 54 26; opacity: .85; animation: sp-streak .22s linear var(--sd, 0s) infinite; }
+.sp-puff {
+  transform-box: fill-box; transform-origin: center;
+  animation: sp-puff .4s ease-out var(--pd, 0s) infinite;
+}
+@keyframes sp-streak { to { stroke-dashoffset: 80; } }
+@keyframes sp-puff {
+  from { transform: translate(0, 0) scale(.3); opacity: .95; }
+  to { transform: translate(-110px, -16px) scale(1.5); opacity: 0; }
+}
+
+/* ---- The wordmark: the cart arrives and brakes into the B ---- */
+.splash-name {
+  --w: min(80vw, 340px);
+  position: relative; margin: 0; line-height: 0; direction: ltr;
+  display: flex; align-items: flex-end;
+}
+.sp-b-move { position: relative; display: block; animation: sp-arrive .55s cubic-bezier(.2, .6, .35, 1) 1.15s both; }
+.sp-b-body { display: block; transform-origin: 50% 100%; animation: sp-brake 1s linear 1.15s both; }
+.sp-b { display: block; width: calc(var(--w) * 944 / 4444); height: calc(var(--w) * 960 / 4444); overflow: visible; }
+.sp-b-trail {
+  position: absolute; right: 85%; bottom: 6%; width: 220%; height: auto; overflow: visible;
+  animation: sp-out .2s ease 1.66s both;
+}
+.sp-rest { display: block; width: calc(var(--w) * 3500 / 4444); height: calc(var(--w) * 960 / 4444); overflow: visible; }
+.sp-rest text { font-family: 'Rubik', system-ui, sans-serif; font-weight: 700; font-size: 1000px; }
+
+@keyframes sp-arrive { from { transform: translateX(calc(-50vw - 60px)); } to { transform: none; } }
+/* 0–55%: the drive in, leaning into the speed. 55%: the brake bites, the top is thrown forward
+   and the cart squashes, then it springs back past upright and settles. */
+@keyframes sp-brake {
+  0%, 55% { transform: skewX(-8deg); }
+  64% { transform: skewX(-22deg) scale(1.12, .86); }
+  76% { transform: skewX(9deg) scale(.95, 1.06); }
+  88% { transform: skewX(-3deg) scale(1.02, .99); }
+  100% { transform: none; }
+}
+@keyframes sp-out { to { opacity: 0; } }
+
+/* Skid marks behind the wheels, and a dust cloud thrown ahead of them. */
+.sp-skid { position: absolute; left: -20%; bottom: -4%; width: 150%; height: auto; overflow: visible; pointer-events: none; }
+.sp-skid-line {
+  opacity: 0; transform-box: fill-box; transform-origin: 100% 50%;
+  animation: sp-skid .6s ease-out 1.66s both;
+}
+.sp-burst {
   opacity: 0; transform-box: fill-box; transform-origin: center;
-  animation: sp-pop .5s cubic-bezier(.3, 1.6, .5, 1) var(--d, 0s) forwards, sp-twinkle 3.2s ease-in-out calc(var(--d, 0s) + .5s) infinite;
+  animation: sp-burst .55s ease-out calc(1.68s + var(--bd, 0s)) both;
+}
+@keyframes sp-skid {
+  0% { opacity: 0; transform: scaleX(.2); }
+  20% { opacity: .9; transform: none; }
+  100% { opacity: 0; transform: none; }
+}
+@keyframes sp-burst {
+  0% { opacity: .95; transform: scale(.2); }
+  100% { opacity: 0; transform: translate(26px, -14px) scale(1.6); }
 }
 
-@keyframes sp-draw { to { stroke-dashoffset: 0; } }
-@keyframes sp-drop { from { opacity: 0; transform: translateY(-36px) rotate(-6deg); } to { opacity: 1; transform: none; } }
-@keyframes sp-rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+/* ---- Name, motto, credit ---- */
+.splash-motto { margin: 22px 0 0; direction: ltr; font-size: 17px; font-weight: 400; letter-spacing: .4px; }
+.splash-motto b { font-weight: 700; }
+.splash-credit {
+  position: absolute; left: 16px; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom));
+  margin: 0; direction: ltr; text-align: center;
+  font-size: 11px; letter-spacing: .3px; color: rgba(250, 249, 245, .78);
+}
+
+/* Enter button, and under it the signed-in user with a sign-out link. */
+.splash-enter { margin-top: 40px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.sp-enter-btn {
+  min-width: 180px; height: 52px; padding: 0 32px; border: none; border-radius: 999px;
+  background: var(--sp-ink); color: var(--sp-bg);
+  font: 700 18px 'Heebo', system-ui, sans-serif; cursor: pointer;
+  box-shadow: 0 6px 18px rgba(120, 45, 20, .22);
+  transition: transform .12s ease;
+}
+.sp-enter-btn:active { transform: scale(.96); }
+.sp-enter-btn:focus-visible { outline: 2px solid var(--sp-ink); outline-offset: 3px; }
+.sp-user {
+  margin: 0; display: flex; align-items: center; gap: 8px;
+  font: 400 13px 'Heebo', system-ui, sans-serif; color: rgba(250, 249, 245, .85);
+}
+.sp-user-name { font-weight: 500; color: var(--sp-ink); max-width: 60vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-user button {
+  padding: 6px 4px; border: none; background: none; color: var(--sp-ink);
+  font: inherit; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+
+/* A tap during the animation jumps to the finished screen. */
+.splash.skip .sp-sky, .splash.skip .sp-b-trail, .splash.skip .sp-skid { display: none; }
+.splash.skip .sp-b-move, .splash.skip .sp-b-body, .splash.skip .sp-ltr, .splash.skip .sp-fade {
+  animation-delay: 0s !important; animation-duration: .2s !important;
+}
+
+.sp-ltr { opacity: 0; transform-box: fill-box; animation: sp-rise-svg .5s cubic-bezier(.2, 1.3, .4, 1) var(--d, 0s) forwards; }
+.sp-fade { opacity: 0; animation: sp-fade .6s ease var(--d, 0s) forwards; }
+/* SVG letters move in user units, so rise by a share of their own height instead of px. */
+@keyframes sp-rise-svg { from { opacity: 0; transform: translateY(35%); } to { opacity: 1; transform: none; } }
 @keyframes sp-fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@keyframes sp-halo { to { opacity: 1; transform: scale(1); } }
-@keyframes sp-pop { from { opacity: 0; transform: scale(0) rotate(-45deg); } to { opacity: 1; transform: none; } }
-@keyframes sp-twinkle { 0%, 100% { scale: 1; } 50% { scale: .75; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .sp-draw path, .sp-drop, .sp-ltr, .sp-fade, .sp-star, .splash-halo { animation: none !important; opacity: 1; stroke-dashoffset: 0; transform: none; }
+  .sp-sky, .sp-b-trail, .sp-skid { display: none; }
+  .sp-b-move, .sp-b-body, .sp-ltr, .sp-fade { animation: none !important; opacity: 1; transform: none; }
 }
-
-/* SVG letters move in user units, so rise by a share of their own height instead of px. */
-.splash-name .sp-ltr { animation-name: sp-rise-svg; }
-@keyframes sp-rise-svg { from { opacity: 0; transform: translateY(35%); } to { opacity: 1; transform: none; } }
