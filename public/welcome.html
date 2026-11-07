@@ -101,6 +101,10 @@
   .scr-row.done .nm { text-decoration: line-through; color: var(--muted); }
   .scr-row .nm { flex: 1; font-weight: 500; }
   .scr-row .q { color: var(--muted); font-size: 12px; }
+  .scr-row .mp { display: block; font-size: 10.5px; font-weight: 400; color: var(--muted); margin-top: 1px; }
+  .scr-row .mp b { color: var(--save); }
+  .mock-check { display: flex; align-items: center; gap: 6px; margin: 2px 14px 4px; font-size: 11.5px; }
+  .mock-check i { width: 14px; height: 14px; border-radius: 4px; background: var(--save); display: grid; place-items: center; color: #fff; font-style: normal; font-size: 10px; }
   .scr-row.enter { animation: rowIn .45s var(--ease) both; }
   .scr-progress { margin: 4px 18px 8px; height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
   .scr-progress b { display: block; height: 100%; width: 0; background: var(--save); border-radius: 99px; transition: width .5s var(--ease); }
@@ -114,6 +118,8 @@
   .float.f1 { top: 14%; inset-inline-end: calc(50% + 120px); }
   .float.f2 { bottom: 16%; inset-inline-start: calc(50% + 116px); animation-delay: -2.5s; }
   .float.f2 .ic { background: var(--brand-soft); color: var(--brand); }
+  /* Two columns but little room beside the phone: keep the lower card on screen. */
+  @media (min-width: 901px) and (max-width: 1180px) { .float.f2 { inset-inline-start: auto; inset-inline-end: 0; } }
   @media (max-width: 560px) { .float.f1 { inset-inline-end: auto; inset-inline-start: 0; top: -34px; } .float.f2 { inset-inline-start: auto; inset-inline-end: 0; bottom: 6%; } }
 
   /* features */
@@ -318,6 +324,7 @@
         <article class="feature reveal" style="--d:.12s"><div class="ic"><svg width="24" height="24"><use href="#i-clock"/></svg></div><h3>היסטוריית קניות</h3><p>בסוף כל קנייה שומרים איפה קניתם וכמה שילמתם, ורואים לאורך זמן לאן הולך הכסף.</p></article>
         <article class="feature reveal"><div class="ic"><svg width="24" height="24"><use href="#i-wifi"/></svg></div><h3>עובד גם בלי קליטה</h3><p>במרתף של הסופר אין רשת? ממשיכים לסמן. השינויים נשמרים ונשלחים כשהחיבור חוזר.</p></article>
         <article class="feature reveal" style="--d:.06s"><div class="ic"><svg width="24" height="24"><use href="#i-truck"/></svg></div><h3>אונליין מול סניף</h3><p>משלוח הביתה מול נסיעה לסניף: רואים את שני המחירים זה לצד זה, עם דמי המשלוח של הרשת.</p></article>
+        <article class="feature reveal" style="--d:.12s"><div class="ic"><svg width="24" height="24"><use href="#i-coin"/></svg></div><h3>מחירי שוק תוך כדי קנייה</h3><p>מסמנים "הצג מחירי שוק", ומתחת לכל מוצר ברשימה מופיע המחיר הכי נמוך באזור ואיפה. למוצר כללי מוצג המוצר הדומה הכי זול.</p></article>
       </div>
     </div>
   </section>
@@ -386,7 +393,8 @@
         <article class="tipc reveal"><h3>בחרו מוצר מדויק למוצרים שחוזרים</h3><p>חלב, קפה, חיתולים. סמל התגית ליד המוצר מצמיד אותו למותג ולגודל, וההשוואה בין הסניפים נעשית על המוצר הזה בדיוק.</p></article>
         <article class="tipc reveal" style="--d:.06s"><h3>בנו רשימה קבועה אחת טובה</h3><p>רוב הקנייה השבועית חוזרת על עצמה. רשימה קבועה חוסכת את ההקלדה, ומשאירה מקום רק למה שמשתנה השבוע.</p></article>
         <article class="tipc reveal" style="--d:.12s"><h3>בדקו את "איפה זול" לפני שיוצאים</h3><p>בדיקה של שנייה לפני הנסיעה מראה אם הסניף הרגיל באמת הזול, או שסניף במרחק שתי דקות זול יותר.</p></article>
-        <article class="tipc reveal"><h3>סרקו מוצרים יקרים בסופר</h3><p>לפני שמכניסים לעגלה משהו יקר, סורקים את הברקוד ורואים כמה הוא עולה בסניפים האחרים.</p></article>
+        <article class="tipc reveal"><h3>הדליקו מחירי שוק בסופר</h3><p>במסך הקנייה מסמנים "הצג מחירי שוק". רואים מיד אם המחיר על המדף גבוה מהמחיר הכי נמוך באזור, ומחליטים אם לקנות עכשיו או בסניף אחר.</p></article>
+        <article class="tipc reveal" style="--d:.06s"><h3>סרקו מוצרים יקרים בסופר</h3><p>לפני שמכניסים לעגלה משהו יקר, סורקים את הברקוד ורואים כמה הוא עולה בסניפים האחרים.</p></article>
         <article class="tipc reveal" style="--d:.06s"><h3>שווה להרחיב את הרדיוס</h3><p>בהגדרות קובעים את מרחק החיפוש. לפעמים עוד שני קילומטרים מוסיפים סניף זול בהרבה.</p></article>
         <article class="tipc reveal" style="--d:.12s"><h3>שמרו קניות בהיסטוריה</h3><p>כשמסיימים קנייה, רושמים כמה שילמתם. אחרי כמה שבועות כבר רואים מגמה, ויודעים איפה הכי משתלם לכם.</p></article>
       </div>
@@ -406,6 +414,8 @@
         <details class="reveal"><summary>המבצעים נכללים בהשוואה?</summary><p>עדיין לא. ההשוואה היא לפי המחיר הרגיל של כל סניף, ודמי המשלוח הם המחיר שהרשת מפרסמת. מבצע בסופר יכול להוריד את המחיר עוד.</p></details>
         <details class="reveal"><summary>איך מצרפים את בן או בת הזוג?</summary><p>בהגדרות מופיע קוד הזמנה. מי שמצטרף נכנס לאפליקציה, בוחר "הצטרפות לבית קיים" ומקליד את הקוד. מאותו רגע יש לכם רשימה אחת משותפת.</p></details>
         <details class="reveal"><summary>מה קורה לנתונים אם מוחקים את האפליקציה מהטלפון?</summary><p>שום דבר. הרשימות, הקטלוג וההיסטוריה שמורים בחשבון. מתקינים שוב, מתחברים עם אותו מייל, וכל הנתונים שם. מי שרוצה למחוק את החשבון לגמרי עושה את זה בהגדרות.</p></details>
+        <details class="reveal"><summary>איפה מוצאים את המדריך הזה מתוך האפליקציה?</summary><p>בלשונית <b>הגדרות</b>, בחלק <b>עזרה</b>: מדריך שימוש, שאלות נפוצות ועמוד האפליקציה.</p></details>
+        <details class="reveal"><summary>מה זה "מחירי שוק" במסך הקנייה?</summary><p>תיבת סימון בראש מסך הקנייה. כשהיא מסומנת, מתחת לכל מוצר מופיע המחיר הכי נמוך שלו בסניפים ברדיוס שבחרתם, ובאיזה סניף. למוצר מדויק מוצג המחיר של המוצר הזה, ולמוצר כללי, כמו "לחם", המוצר הדומה הכי זול. ההגדרה נשמרת במכשיר.</p></details>
         <details class="reveal"><summary>איך מתחברים?</summary><p>עם המייל. מקלידים כתובת, מקבלים קוד בן 6 ספרות ומקלידים אותו באפליקציה. אין סיסמה לזכור.</p></details>
       </div>
     </div>
@@ -530,7 +540,7 @@
   }
 
   // Guide: six steps, each with its own phone screen.
-  const row = (n, q, done) => `<div class="scr-row ${done ? 'done' : ''}"><span class="box">${check}</span><span class="nm">${n}</span><span class="q">${q ?? ''}</span></div>`
+  const row = (n, q, done, mp) => `<div class="scr-row ${done ? 'done' : ''}"><span class="box">${check}</span><span class="nm">${n}${mp ? `<small class="mp">${mp}</small>` : ''}</span><span class="q">${q ?? ''}</span></div>`
   const head = (title, sub) => `<div class="scr-head"><span class="scr-sync"><i></i>מסונכרן</span><div class="scr-title">${title}</div><div class="scr-sub">${sub}</div></div>`
   const tabs = (on) => `<div class="scr-tabs">${['רשימה', 'קטלוג', 'איפה זול', 'הגדרות'].map((t, i) => `<span class="${i === on ? 'on' : ''}">${t}</span>`).join('')}</div>`
   let os = /android/i.test(navigator.userAgent) ? 'android' : 'iphone'
@@ -574,9 +584,10 @@
     {
       t: 'קנייה',
       body: () => `<h3>מכינים קנייה ויוצאים לסופר</h3>
-        <ol><li>בעמוד <b>רשימה</b> בוחרים <b>"רשימה מהירה"</b>, או אחת הרשימות הקבועות.</li><li>מוסיפים ומורידים מה שצריך השבוע. הרשימה הקבועה לא משתנה.</li><li>בסופר עוברים ל<b>"קנייה"</b> ומסמנים כל מה שנכנס לעגלה.</li><li>בסוף לוחצים <b>"סיימתי קנייה"</b> ושומרים איפה קניתם וכמה שילמתם.</li></ol>`,
+        <ol><li>בעמוד <b>רשימה</b> בוחרים <b>"רשימה מהירה"</b>, או אחת הרשימות הקבועות.</li><li>מוסיפים ומורידים מה שצריך השבוע. הרשימה הקבועה לא משתנה.</li><li>בסופר עוברים ל<b>"קנייה"</b> ומסמנים כל מה שנכנס לעגלה.</li><li>רוצים לדעת אם המחיר הוגן? מסמנים למעלה <b>"הצג מחירי שוק"</b>, ומתחת לכל מוצר מופיע המחיר הכי נמוך ברדיוס שלכם ואיפה.</li><li>בסוף לוחצים <b>"סיימתי קנייה"</b> ושומרים איפה קניתם וכמה שילמתם.</li></ol>`,
       screen: () => `${head('סופר', 'מבוסס על: בסיס שבועי')}<div class="mock-seg"><span>עריכה</span><span class="on">קנייה</span></div>
-        <div class="scr-card">${row('חלב', '2', true)}${row('ביצים', '1', true)}${row('לחם', '1')}${row('עגבניות', '1 ק"ג')}</div><div class="mock-btn">סיימתי קנייה</div>${tabs(0)}`,
+        <div class="mock-check"><i>✓</i>הצג מחירי שוק</div>
+        <div class="scr-card">${row('חלב', '2', true, '<b>₪6.90</b> · סניף א׳')}${row('ביצים', '1', true, '<b>₪12.50</b> · סניף ב׳')}${row('לחם', '1', false, '<b>₪7.40</b> · לחם פרוס · סניף ב׳')}</div><div class="mock-btn">סיימתי קנייה</div>${tabs(0)}`,
     },
     {
       t: 'חיסכון',
