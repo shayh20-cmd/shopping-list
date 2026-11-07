@@ -265,6 +265,13 @@ function EditBody({ list, startAll }) {
   const { items, products } = useStore()
   const [sheet, setSheet] = useState(false)
   const [showAll, setShowAll] = useState(startAll)
+  const [openCats, setOpenCats] = useState(() => new Set()) // categories expanded under "כל המוצרים"
+  const toggleCat = (title) => setOpenCats((prev) => {
+    const next = new Set(prev)
+    if (next.has(title)) next.delete(title)
+    else next.add(title)
+    return next
+  })
   const all = items.filter((i) => i.list_id === list.id)
   const mine = all.filter((i) => !i.checked)
   const inCart = all.length - mine.length
@@ -297,16 +304,32 @@ function EditBody({ list, startAll }) {
           הרשימה ריקה.{list.kind === 'grocery' ? ' בחרו מוצרים ב"כל המוצרים", מרשימה קבועה או בשורה למעלה.' : ' הוסיפו פריטים בשורה למעלה.'}
         </div>
       )}
-      {groups.map(([title, rows]) => (
-        <section key={title || 'all'}>
-          {title && <div className="group-title">{title}</div>}
-          <div className="card" style={title ? undefined : { marginTop: 8 }}>
-            {rows.map((it) => (it.product
-              ? <ProductAddRow key={it.id} product={it.product} list={list} />
-              : <ItemRow key={it.id} item={it} />))}
-          </div>
-        </section>
-      ))}
+      {groups.map(([title, rows]) => {
+        // Under "כל המוצרים" each category folds, as in the catalog; the list itself stays open.
+        const folding = showAll && canShowAll && title
+        const open = !folding || openCats.has(title)
+        const chosen = rows.filter((it) => !it.product).length
+        return (
+          <section key={title || 'all'}>
+            {folding ? (
+              <button className={`cat-head ${open ? 'open' : ''}`} aria-expanded={open} onClick={() => toggleCat(title)}>
+                <span className="cat-name">{title}</span>
+                <span className={`cat-count ${chosen ? 'some' : ''}`}>{chosen} מתוך {rows.length}</span>
+                <span className="cat-chevron" aria-hidden="true">‹</span>
+              </button>
+            ) : (
+              title && <div className="group-title">{title}</div>
+            )}
+            {open && (
+              <div className="card" style={title ? undefined : { marginTop: 8 }}>
+                {rows.map((it) => (it.product
+                  ? <ProductAddRow key={it.id} product={it.product} list={list} />
+                  : <ItemRow key={it.id} item={it} />))}
+              </div>
+            )}
+          </section>
+        )
+      })}
       {inCart > 0 && (
         <p className="sub" style={{ margin: '12px 20px 0' }}>
           {inCart} פריטים כבר סומנו בעגלה. הם יירדו מהרשימה כשתלחצו "סיימתי קנייה".
