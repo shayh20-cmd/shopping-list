@@ -75,8 +75,27 @@ export default function SettingsScreen() {
         </section>
       )}
 
+      <HelpSection />
       {isConfigured && <AccountSection />}
     </>
+  )
+}
+
+// The welcome page (public/welcome.html) holds the guide and the FAQ; it opens beside the app.
+const WELCOME = `${import.meta.env.BASE_URL}welcome.html`
+
+function HelpSection() {
+  const link = (hash, label) => (
+    <a className="btn" href={`${WELCOME}${hash}`} target="_blank" rel="noopener">{label}</a>
+  )
+  return (
+    <section className="form">
+      <h2>עזרה</h2>
+      <span className="sub">איך מתקינים, מצרפים את בני הבית, בונים רשימה קבועה ומשווים מחירים.</span>
+      {link('#guide', 'מדריך שימוש')}
+      {link('#faq', 'שאלות נפוצות')}
+      {link('', 'על האפליקציה')}
+    </section>
   )
 }
 
