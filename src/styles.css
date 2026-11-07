@@ -65,6 +65,7 @@ button.row:last-child { border-bottom: none; }
 .btn.small { height: 36px; padding: 0 12px; border-radius: 10px; font-size: 14px; }
 .btn.added { border: none; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .btn.danger { color: var(--warn); }
+a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: var(--ink); }
 .actions { padding: 16px 20px 0; display: flex; flex-direction: column; gap: 10px; }
 
 .chips { display: flex; gap: 8px; padding: 0 20px 4px; }
