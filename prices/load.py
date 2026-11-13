@@ -13,7 +13,7 @@ from il_supermarket_scarper import ScarpingTask, FileTypesFilters
 
 CHAINS = [
     "SHUFERSAL", "RAMI_LEVY", "YOHANANOF", "OSHER_AD", "VICTORY_NEW_SOURCE", "TIV_TAAM",
-    "HAZI_HINAM", "YAYNO_BITAN_AND_CARREFOUR", "MAHSANI_ASHUK_NEW_SOURCE", "KESHET",
+    "HAZI_HINAM", "YAYNO_BITAN_AND_CARREFOUR", "KESHET",
     "STOP_MARKET", "FRESH_MARKET_AND_SUPER_DOSH", "KING_STORE", "ZOL_VEBEGADOL",
     "SUPER_YUDA", "CITY_MARKET_SHOPS", "SHUK_AHIR", "NETIV_HASED",
 ]
@@ -25,6 +25,16 @@ ONLINE_STORES = {
     "7290058140886-39": {"label": "רמי לוי אונליין", "delivery_fee": 35.90, "min_order": None, "fee_note": None},
     "7290873255550-519": {"label": "טיב טעם B-Klick", "delivery_fee": None, "min_order": 300,
                           "fee_note": "דמי המשלוח מוצגים רק בסל באתר"},
+    # Victory and Carrefour block GitHub's servers; these load only when the loader runs from
+    # a computer in Israel (prices/local/README.md). Their fees aren't checked yet.
+    "7290696200003-97": {"label": "ויקטורי אונליין", "delivery_fee": None, "min_order": None,
+                         "fee_note": "דמי המשלוח מוצגים באתר"},
+    "7290055700007-471": {"label": "קרפור אונליין", "delivery_fee": None, "min_order": None,
+                          "fee_note": "דמי המשלוח מוצגים באתר"},
+    "7290055700007-472": {"label": "יינות ביתן אונליין", "delivery_fee": None, "min_order": None,
+                          "fee_note": "דמי המשלוח מוצגים באתר"},
+    "7290055700007-473": {"label": "Quik", "delivery_fee": None, "min_order": None,
+                          "fee_note": "דמי המשלוח מוצגים באפליקציה"},
 }
 MAX_RADIUS_KM = 20
 MAX_STORES_PER_HOME = 40
@@ -454,9 +464,12 @@ def main():
         log(f"items catalog: {len(all_items)}")
     if db:
         # Only online stores whose prices loaded today, so the app never shows an empty online basket.
+        # A chain this run couldn't reach at all (blocked here) keeps what another run loaded.
         online = [{"store_key": k, **v} for k, v in ONLINE_STORES.items() if k in newest]
+        gone = [k for k in ONLINE_STORES if k in stores and k not in newest]
         try:
-            db.delete("chain_online", {"store_key": "not.is.null"})
+            if gone:
+                db.delete("chain_online", {"store_key": f"in.({','.join(gone)})"})
             db.upsert("chain_online", online, "store_key")
             log(f"online stores: {[o['label'] for o in online]}")
         except RuntimeError as e:
