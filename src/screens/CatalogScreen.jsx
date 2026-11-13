@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useStore, actions } from '../lib/store'
-import { CATEGORIES, OTHER, categoryRank, qtyLabel } from '../data/catalog'
+import { CATEGORIES, OTHER, categoryRank } from '../data/catalog'
 import { ExactButton } from '../components/ProductPicker'
 import ResetButton from '../components/ResetButton'
+import { QtyStepper } from './ListScreen'
 
 function ProductRow({ product, item, onAdd }) {
   return (
@@ -13,11 +14,7 @@ function ProductRow({ product, item, onAdd }) {
       </div>
       <ExactButton product={product} />
       {!onAdd ? null : item ? (
-        <div className="stepper">
-          <button aria-label={`הפחת ${product.name}`} onClick={() => actions.setQty(item, item.qty - 1)}>−</button>
-          <span>{qtyLabel(item)}</span>
-          <button aria-label={`הוסף ${product.name}`} onClick={() => actions.setQty(item, item.qty + 1)}>+</button>
-        </div>
+        <QtyStepper item={item} />
       ) : (
         <button className="btn small" onClick={onAdd}>+ הוסף</button>
       )}

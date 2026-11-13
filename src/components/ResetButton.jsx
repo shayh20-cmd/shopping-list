@@ -27,7 +27,7 @@ export default function ResetButton({ list }) {
       <div className="form reset-ask" role="alertdialog" aria-label="איפוס בחירה">
         <h2>{question}</h2>
         <button className="btn danger" onClick={() => { actions.resetList(list.id); setAsking(false) }}>כן, אפס</button>
-        <button className="btn" onClick={() => setAsking(false)}>ביטול</button>
+        <button className="btn" onClick={() => setAsking(false)}>לא, השאר כמו שהיה</button>
       </div>
     )
   }

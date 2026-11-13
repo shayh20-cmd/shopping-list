@@ -44,7 +44,8 @@ create table if not exists list_items (
   product_id uuid references products on delete set null,
   name text not null,
   category text,
-  qty int not null default 1 check (qty > 0),
+  qty numeric(10,3) not null default 1 check (qty > 0),
+  unit text check (unit in ('kg', 'unit')),  -- produce only; null = by the product's kind
   note text not null default '',
   checked boolean not null default false,
   added_by text,

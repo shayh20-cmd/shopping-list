@@ -18,7 +18,7 @@ export const CATEGORIES = [
 export const OTHER = 'אחר'
 
 const SEED = {
-  'ירקות ופירות': ['עגבניות', 'מלפפונים', 'פלפל אדום', 'גזר', 'בצל', 'בצל ירוק', 'שום', 'תפוחי אדמה', 'בטטה', 'קישואים', 'חציל', 'חסה', 'כרוב', 'פטרוזיליה', 'כוסברה', 'שמיר', 'לימון', 'אבוקדו', 'בננות', 'תפוחים', 'תפוזים', 'קלמנטינות', 'ענבים', 'אבטיח', 'תותים', 'פטריות', 'רימון', 'אננס', 'אפרסק', 'שזיפים'],
+  'ירקות ופירות': ['עגבניות', 'מלפפונים', 'פלפל אדום', 'גזר', 'בצל', 'בצל ירוק', 'שום', 'תפוחי אדמה', 'בטטה', 'קישואים', 'חציל', 'חסה', 'כרוב', 'פטרוזיליה', 'כוסברה', 'שמיר', 'נענע', 'לימון', 'אבוקדו', 'בננות', 'תפוחים', 'תפוזים', 'קלמנטינות', 'ענבים', 'אבטיח', 'תותים', 'פטריות', 'רימון', 'אננס', 'אפרסק', 'שזיפים'],
   'מוצרי חלב וביצים': ['חלב', 'ביצים', 'קוטג\'', 'גבינה לבנה', 'גבינה צהובה', 'גבינה בולגרית', 'שמנת מתוקה', 'שמנת חמוצה', 'יוגורט', 'מעדנים', 'חמאה', 'לבן', 'שוקו', 'חלב נטול לקטוז'],
   'לחם ומאפים': ['לחם', 'פיתות', 'לחמניות', 'חלה', 'טורטיות', 'קרקרים', 'פריכיות'],
   'בשר עוף ודגים': ['חזה עוף', 'שוקיים', 'כרעיים', 'בשר טחון', 'שניצל', 'נקניקיות', 'סלמון', 'פילה דג', 'פסטרמה', 'פרגית'],
@@ -38,8 +38,26 @@ export function seedProducts() {
 
 export const PRODUCE = 'ירקות ופירות'
 
-// Produce is counted in kilos; everything else in units.
-export const qtyLabel = (item) => (item.category === PRODUCE ? `${item.qty} ק"ג` : `${item.qty}`)
+// Leafy greens and herbs come in bunches, not by weight, so they start in units.
+const LEAFY = ['חסה', 'פטרוזיליה', 'פטרוזילה', 'כוסברה', 'בצל ירוק', 'נענע', 'שמיר', 'בזיליקום', 'תרד', 'רוקט', 'עלי בייבי', 'מנגולד']
+
+// 'kg' or 'unit'. Produce is weighed unless it is leafy or the item was switched; the rest is counted.
+export function unitOf(item) {
+  if (item.category !== PRODUCE) return 'unit'
+  if (item.unit === 'kg' || item.unit === 'unit') return item.unit
+  return LEAFY.some((w) => item.name?.startsWith(w)) ? 'unit' : 'kg'
+}
+
+// Kilos go up and down by half a kilo.
+export const qtyStep = (item) => (unitOf(item) === 'kg' ? 0.5 : 1)
+export const stepQty = (item, dir) => Math.round((Number(item.qty) + dir * qtyStep(item)) * 2) / 2
+
+export function qtyLabel(item) {
+  const q = Number(item.qty)
+  if (item.category !== PRODUCE) return `${q}`
+  if (unitOf(item) === 'unit') return `${q} יח'`
+  return q === 0.5 ? 'חצי ק"ג' : `${q} ק"ג`
+}
 
 export function categoryRank(category) {
   const i = CATEGORIES.indexOf(category)

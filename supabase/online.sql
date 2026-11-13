@@ -20,7 +20,7 @@ create function basket_lines(hh uuid)
 returns table (
   store_key text, chain_name text, store_name text, address text, city text, distance_km double precision, approx boolean,
   online boolean, delivery_fee numeric, min_order numeric, fee_note text,
-  item_id uuid, item_name text, qty int, price numeric, matched_name text, exact boolean
+  item_id uuid, item_name text, qty numeric, price numeric, matched_name text, exact boolean
 ) language sql stable as $$
   with h as (
     select home_lat, home_lng, radius_km from households where id = hh and is_member(hh) and home_lat is not null
