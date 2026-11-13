@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore, actions } from '../lib/store'
 import { isConfigured } from '../lib/supabase'
-import { CATEGORIES, OTHER, categoryRank, qtyLabel } from '../data/catalog'
+import { CATEGORIES, OTHER, PRODUCE, categoryRank, qtyLabel, stepQty, unitOf } from '../data/catalog'
 import ShopBody from './ShopScreen'
 import { ExactButton } from '../components/ProductPicker'
 import ResetButton from '../components/ResetButton'
@@ -50,11 +50,27 @@ function ItemRow({ item }) {
         {product?.barcode_name && <span className="row-meta">{product.barcode_name}</span>}
       </div>
       <ExactButton product={product} />
-      <div className="stepper">
-        <button aria-label={`הפחת ${item.name}`} onClick={() => actions.setQty(item, item.qty - 1)}>−</button>
-        <span>{qtyLabel(item)}</span>
-        <button aria-label={`הוסף ${item.name}`} onClick={() => actions.setQty(item, item.qty + 1)}>+</button>
-      </div>
+      <QtyStepper item={item} />
+    </div>
+  )
+}
+
+// − qty +. Produce moves by half a kilo, and its unit (ק"ג / יח') switches with a tap on the amount.
+export function QtyStepper({ item }) {
+  const produce = item.category === PRODUCE
+  const kg = unitOf(item) === 'kg'
+  return (
+    <div className="stepper">
+      <button aria-label={`הפחת ${item.name}`} onClick={() => actions.setQty(item, stepQty(item, -1))}>−</button>
+      {produce
+        ? (
+          <button className="qty-unit" onClick={() => actions.setUnit(item, kg ? 'unit' : 'kg')}
+            aria-label={`${qtyLabel(item)}. ${kg ? 'החלף ליחידות' : 'החלף לקילו'}`} title={kg ? 'החלף ליחידות' : 'החלף לקילו'}>
+            {qtyLabel(item)}
+          </button>
+        )
+        : <span>{qtyLabel(item)}</span>}
+      <button aria-label={`הוסף ${item.name}`} onClick={() => actions.setQty(item, stepQty(item, 1))}>+</button>
     </div>
   )
 }
@@ -167,56 +183,92 @@ function BaseSheet({ list, onClose }) {
   )
 }
 
-// "מבוסס על" for the trip, with a way to copy this trip back into one of its bases.
-function BaseLine({ list }) {
+// "מבוסס על" for the trip: which fixed lists it came from, and what can be done with them.
+function BaseLine({ list, onAddBase }) {
   const { lists } = useStore()
+  const [open, setOpen] = useState(false)
   const [ask, setAsk] = useState(null) // { kind: 'update' | 'remove' | 'clear', base }
   const bases = (list.based_on ?? []).map((id) => lists.find((l) => l.id === id)).filter(Boolean)
   if (!bases.length) return null
+  const names = bases.map((b) => `"${b.name}"`).join(' + ')
 
-  const questions = {
-    update: () => `להחליף את התוכן של "${ask.base.name}" במה שיש עכשיו ברשימה?`,
-    remove: () => `להוציא את "${ask.base.name}" מהקנייה? המוצרים שלה יירדו מהרשימה. הרשימה הקבועה עצמה לא משתנה.`,
-    clear: () => 'להתחיל קנייה חדשה? כל הפריטים יירדו מהרשימה.',
+  const confirm = {
+    update: () => ({
+      q: `לשמור את הרשימה של עכשיו בתוך "${ask.base.name}"? בפעם הבאה שתבחרו בה, היא תיפתח בדיוק כמו עכשיו.`,
+      yes: `כן, עדכן את "${ask.base.name}"`, tone: 'primary',
+    }),
+    remove: () => ({
+      q: `להוריד מהקנייה את המוצרים שהגיעו מ"${ask.base.name}"? הרשימה הקבועה עצמה נשארת שמורה.`,
+      yes: 'כן, הורד אותם', tone: 'danger',
+    }),
+    clear: () => ({ q: 'לרוקן את הרשימה ולבחור מחדש איך מתחילים?', yes: 'כן, קנייה חדשה', tone: 'danger' }),
   }
   const run = () => {
     if (ask.kind === 'update') actions.saveAsFixedList(list.id, ask.base.id)
     if (ask.kind === 'remove') actions.removeBase(list.id, ask.base.id)
     if (ask.kind === 'clear') actions.clearTrip(list.id)
     setAsk(null)
+    setOpen(false)
+  }
+  const option = (key, title, meta, onClick) => (
+    <button key={key} className="row" onClick={onClick}>
+      <span className="row-main">
+        <span className="row-name">{title}</span>
+        <span className="row-meta">{meta}</span>
+      </span>
+    </button>
+  )
+
+  if (ask) {
+    const c = confirm[ask.kind]()
+    return (
+      <div className="base-box" role="alertdialog" aria-label="אישור">
+        <p className="base-q">{c.q}</p>
+        <div className="base-confirm">
+          <button className={`btn small ${c.tone}`} onClick={run}>{c.yes}</button>
+          <button className="btn small" onClick={() => setAsk(null)}>לא, השאר כמו שהיה</button>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="base-line">
-      <span>מבוסס על: <b>{bases.map((b) => b.name).join(' + ')}</b></span>
-      {!ask && (
-        <span className="base-actions">
-          {bases.map((b) => (
-            <span key={b.id} className="base-chip">
-              <button className="link-btn" onClick={() => setAsk({ kind: 'update', base: b })}>עדכן את "{b.name}" לפי הקנייה</button>
-              <button className="link-btn" onClick={() => setAsk({ kind: 'remove', base: b })}>בטל את "{b.name}"</button>
-            </span>
-          ))}
-          <button className="link-btn" onClick={() => setAsk({ kind: 'clear' })}>התחל קנייה חדשה</button>
+    <div className="base-box">
+      <button className="base-head" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="base-title">
+          <span className="base-kicker">הקנייה התחילה מרשימה קבועה</span>
+          <b>{names}</b>
         </span>
-      )}
-      {ask && (
-        <div className="inline-form">
-          <span>{questions[ask.kind]()}</span>
-          <button className={`btn small ${ask.kind === 'update' ? 'primary' : 'danger'}`} onClick={run}>
-            {ask.kind === 'update' ? 'עדכן' : ask.kind === 'remove' ? 'בטל' : 'התחל מחדש'}
-          </button>
-          <button className="btn small" onClick={() => setAsk(null)}>ביטול</button>
-        </div>
+        <span className="base-toggle">{open ? 'סגור' : 'אפשרויות'} <span className={`cat-chevron ${open ? 'up' : ''}`} aria-hidden="true">‹</span></span>
+      </button>
+      {open && (
+        <>
+          <p className="base-note">מה שמוסיפים או מורידים כאן משנה רק את הקנייה הזו. הרשימה הקבועה לא משתנה, אלא אם תבחרו לעדכן אותה.</p>
+          <div className="card base-options">
+            {bases.map((b) => option(`u${b.id}`, `עדכן את "${b.name}" לפי הקנייה`, 'הרשימה הקבועה תהיה בדיוק כמו הרשימה של עכשיו',
+              () => setAsk({ kind: 'update', base: b })))}
+            {bases.map((b) => option(`r${b.id}`, `הורד את המוצרים של "${b.name}"`, 'רק מהקנייה הזו. מה שהוספתם בעצמכם נשאר',
+              () => setAsk({ kind: 'remove', base: b })))}
+            {option('add', 'הוסף עוד רשימה קבועה', 'המוצרים שלה יצטרפו לקנייה', () => { setOpen(false); onAddBase() })}
+            {option('clear', 'התחל קנייה חדשה', 'מרוקן את הרשימה ובוחרים מחדש איך מתחילים', () => setAsk({ kind: 'clear' }))}
+          </div>
+        </>
       )}
     </div>
   )
 }
 
 // No trip yet: start a quick list here, or start from one of the fixed lists.
-function StartChoice({ list, onQuick }) {
+// On launch a trip that is still exactly its fixed lists starts over too; picking empties it first.
+function StartChoice({ list, onQuick, onPick, restart }) {
   const { items, lists } = useStore()
   const fixedLists = lists.filter((l) => l.kind === 'fixed')
+  const last = restart ? list.based_on ?? [] : []
+  const pick = (f) => {
+    if (restart) actions.clearTrip(list.id)
+    actions.loadFixedList(f.id, list.id)
+    onPick()
+  }
   return (
     <>
       <div className="card start-card">
@@ -234,10 +286,13 @@ function StartChoice({ list, onQuick }) {
         : (
           <div className="card">
             {fixedLists.map((f) => (
-              <button key={f.id} className="row" onClick={() => actions.loadFixedList(f.id, list.id)}>
+              <button key={f.id} className="row" onClick={() => pick(f)}>
                 <span className="row-main">
                   <span className="row-name">{f.name}</span>
-                  <span className="row-meta">{items.filter((i) => i.list_id === f.id).length} פריטים · אפשר להוסיף ולהוריד בלי לשנות אותה</span>
+                  <span className="row-meta">
+                    {items.filter((i) => i.list_id === f.id).length} פריטים
+                    {last.includes(f.id) ? ' · נבחרה בפעם הקודמת' : ' · אפשר להוסיף ולהוריד בלי לשנות אותה'}
+                  </span>
                 </span>
                 <span className="btn small" aria-hidden="true">בחר</span>
               </button>
@@ -287,7 +342,7 @@ function EditBody({ list, startAll }) {
 
   return (
     <>
-      <BaseLine list={list} />
+      <BaseLine list={list} onAddBase={() => setSheet(true)} />
       <QuickAdd list={list} />
       <div className="chips wrap">
         {canShowAll && (
@@ -340,15 +395,30 @@ function EditBody({ list, startAll }) {
   )
 }
 
+// Asked once per app launch: does the trip open as it was, or on "how do we start"?
+let launchRestart
+
+// A trip nobody has worked on yet: exactly its fixed lists, nothing added, changed or in the cart.
+function untouched(list, items) {
+  if (!(list.based_on ?? []).length) return false
+  if (items.some((i) => i.list_id === list.id && i.checked)) return false
+  const { remove, restore, readd } = actions.resetPlan(list.id)
+  return !remove.length && !restore.length && !readd.length
+}
+
 // One list, two modes: edit it at home, check it off in the store.
 export default function ListScreen({ list, mode, setMode, go }) {
   const { items } = useStore()
   const [quick, setQuick] = useState(false)
+  const [, rerender] = useState(0)
   if (!list) return <div className="empty">הרשימה נטענת…</div>
+  if (launchRestart === undefined) launchRestart = untouched(list, items)
   const all = items.filter((i) => i.list_id === list.id)
   const toBuy = all.filter((i) => !i.checked).length
-  // Nothing on the trip and nothing it is based on: choose how to start.
-  const fresh = !quick && !all.length && !(list.based_on ?? []).length
+  // Nothing on the trip and nothing it is based on, or a fresh launch on an untouched trip: choose how to start.
+  const restart = launchRestart && untouched(list, items)
+  const fresh = restart || (!quick && !all.length && !(list.based_on ?? []).length)
+  const started = () => { launchRestart = false; rerender((n) => n + 1); setMode('edit') }
 
   if (fresh) {
     return (
@@ -358,7 +428,9 @@ export default function ListScreen({ list, mode, setMode, go }) {
           <h1>קנייה חדשה</h1>
           <span className="sub">איך מתחילים?</span>
         </header>
-        <StartChoice list={list} onQuick={() => { setQuick(true); setMode('edit') }} />
+        <StartChoice list={list} restart={restart}
+          onQuick={() => { if (restart) actions.clearTrip(list.id); setQuick(true); started() }}
+          onPick={started} />
       </>
     )
   }

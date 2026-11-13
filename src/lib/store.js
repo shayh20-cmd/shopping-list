@@ -1,7 +1,7 @@
 // App state with optimistic local updates, an offline write queue, and Supabase realtime sync.
 import { useSyncExternalStore } from 'react'
 import { supabase, isConfigured } from './supabase'
-import { seedProducts, OTHER } from '../data/catalog'
+import { seedProducts, OTHER, stepQty } from '../data/catalog'
 
 const STATE_KEY = 'shopping-state-v1'
 const QUEUE_KEY = 'shopping-queue-v1'
@@ -160,7 +160,7 @@ function copyItem(item, listId) {
   const t = now()
   return {
     id: uuid(), household_id: state.household.id, list_id: listId, product_id: item.product_id,
-    name: item.name, category: item.category, qty: item.qty, note: '', checked: false,
+    name: item.name, category: item.category, qty: item.qty, unit: item.unit ?? null, note: '', checked: false,
     added_by: me(), created_at: t, updated_at: t,
   }
 }
@@ -203,7 +203,7 @@ export const actions = {
     const existing = state.items.find(
       (i) => i.list_id === listId && !i.checked && (productId ? i.product_id === productId : i.name === clean),
     )
-    if (existing) return actions.setQty(existing, existing.qty + 1)
+    if (existing) return actions.setQty(existing, stepQty(existing, 1))
     const row = {
       id: uuid(),
       household_id: state.household.id,
@@ -222,8 +222,14 @@ export const actions = {
   },
 
   setQty(item, qty) {
-    if (qty < 1) return actions.removeItems([item.id])
+    if (!(qty > 0)) return actions.removeItems([item.id])
     actions.updateItem(item, { qty })
+  },
+
+  // Produce between kilos and units; a switch to units rounds up to whole ones.
+  setUnit(item, unit) {
+    const qty = unit === 'unit' ? Math.max(1, Math.ceil(Number(item.qty))) : Number(item.qty)
+    actions.updateItem(item, { unit, qty })
   },
 
   updateItem(item, patch) {
