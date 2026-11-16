@@ -63,3 +63,20 @@ export function categoryRank(category) {
   const i = CATEGORIES.indexOf(category)
   return i === -1 ? CATEGORIES.length : i
 }
+
+export const byName = (a, b) => a.name.localeCompare(b.name, 'he')
+
+// Manual order: rows with a place by it; rows not placed yet after them, by shelf order and then name.
+export function byOrder(orderOf) {
+  return (a, b) => {
+    const x = orderOf(a)
+    const y = orderOf(b)
+    if (x == null || y == null) {
+      return (x == null) - (y == null) || categoryRank(a.category) - categoryRank(b.category) || byName(a, b)
+    }
+    return x - y || byName(a, b)
+  }
+}
+
+// א-ב, or the order the household dragged the products into.
+export const rowSorter = (abc, orderOf) => (abc ? byName : byOrder(orderOf))

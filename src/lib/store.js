@@ -1,7 +1,7 @@
 // App state with optimistic local updates, an offline write queue, and Supabase realtime sync.
 import { useSyncExternalStore } from 'react'
 import { supabase, isConfigured } from './supabase'
-import { seedProducts, OTHER, stepQty } from '../data/catalog'
+import { seedProducts, OTHER, stepQty, byOrder } from '../data/catalog'
 
 const STATE_KEY = 'shopping-state-v1'
 const QUEUE_KEY = 'shopping-queue-v1'
@@ -95,11 +95,12 @@ function enqueue(op) {
 
 // Columns from a migration that may not have run yet (account-and-lists.sql). If the server
 // doesn't know them (PGRST204), the write is sent again without them instead of failing.
-const OPTIONAL_COLUMNS = { lists: ['created_by', 'updated_at'] }
+// product-order.sql adds products.sort_order the same way.
+const OPTIONAL_COLUMNS = { lists: ['created_by', 'updated_at'], products: ['sort_order'] }
 
 function withoutOptional(op) {
   const drop = (r) => Object.fromEntries(Object.entries(r).filter(([k]) => !OPTIONAL_COLUMNS[op.table].includes(k)))
-  if (op.type === 'insert') return { ...op, rows: op.rows.map(drop) }
+  if (op.type === 'insert' || op.type === 'upsert') return { ...op, rows: op.rows.map(drop) }
   if (op.type === 'update') {
     const patch = drop(op.patch)
     return Object.keys(patch).length ? { ...op, patch } : null
@@ -117,6 +118,7 @@ async function runOp(op) {
 function sendOp(op) {
   const t = supabase.from(op.table)
   if (op.type === 'insert') return t.insert(op.rows)
+  if (op.type === 'upsert') return t.upsert(op.rows)
   if (op.type === 'update') return t.update(op.patch).eq('id', op.id)
   return t.delete().in('id', op.ids)
 }
@@ -188,6 +190,16 @@ function insertItems(rows) {
   upsertLocal('list_items', rows)
   enqueue({ table: 'list_items', type: 'insert', rows })
   touchLists(rows.map((r) => r.list_id))
+}
+
+// Products not placed by hand yet get a place after the placed ones, in shelf order, so a drag has neighbours.
+function ensureOrder() {
+  const unplaced = state.products.filter((p) => p.sort_order == null)
+  if (!unplaced.length) return
+  let max = Math.max(0, ...state.products.map((p) => p.sort_order ?? 0))
+  const rows = [...unplaced].sort(byOrder(() => null)).map((p) => ({ ...p, sort_order: (max += 1024) }))
+  upsertLocal('products', rows)
+  enqueue({ table: 'products', type: 'upsert', rows })
 }
 
 // ---------- actions ----------
@@ -296,6 +308,65 @@ export const actions = {
     upsertLocal('products', [row])
     enqueue({ table: 'products', type: 'insert', rows: [row] })
     return row
+  },
+
+  // Rename a product or move it to another category. The lists' items of the product follow it.
+  // Returns an error message, or null.
+  updateProduct(product, { name = product.name, category = product.category }) {
+    const clean = name.trim()
+    if (!clean) return 'צריך שם למוצר'
+    if (state.products.some((p) => p.id !== product.id && p.name === clean)) return `כבר יש בקטלוג מוצר בשם "${clean}"`
+    const patch = {}
+    if (clean !== product.name) patch.name = clean
+    if (category !== product.category) patch.category = category
+    if (!Object.keys(patch).length) return null
+    upsertLocal('products', [{ id: product.id, ...patch }])
+    enqueue({ table: 'products', type: 'update', id: product.id, patch })
+    const t = now()
+    for (const it of state.items.filter((i) => i.product_id === product.id)) {
+      const p = { ...patch, updated_at: t }
+      upsertLocal('list_items', [{ id: it.id, ...p }])
+      enqueue({ table: 'list_items', type: 'update', id: it.id, patch: p })
+    }
+    return null
+  },
+
+  // Off the catalog. Items already on lists stay there as plain items (the server sets product_id to null too).
+  deleteProduct(product) {
+    upsertLocal('list_items', state.items.filter((i) => i.product_id === product.id).map((i) => ({ id: i.id, product_id: null })))
+    removeLocal('products', [product.id])
+    enqueue({ table: 'products', type: 'delete', ids: [product.id] })
+  },
+
+  // Manual order: put a product right after prevId or right before nextId (or last), within a category
+  // (moving it there if it was elsewhere), or among all products when category is not given.
+  moveProduct(id, { category, prevId = null, nextId = null }) {
+    ensureOrder()
+    const product = state.products.find((p) => p.id === id)
+    if (!product) return
+    const cmp = byOrder((p) => p.sort_order)
+    const seq = state.products.filter((p) => p.id !== id && (category === undefined || p.category === category)).sort(cmp)
+    let at = seq.length
+    const prev = seq.findIndex((p) => p.id === prevId)
+    const next = seq.findIndex((p) => p.id === nextId)
+    if (prev !== -1) at = prev + 1
+    else if (next !== -1) at = next
+    const before = seq[at - 1]?.sort_order
+    const after = seq[at]?.sort_order
+    const order = before != null && after != null ? (before + after) / 2
+      : before != null ? before + 1024
+        : after != null ? after - 1024
+          : product.sort_order
+    if (category !== undefined && category !== product.category) actions.updateProduct(product, { category })
+    if (order !== product.sort_order) {
+      upsertLocal('products', [{ id, sort_order: order }])
+      enqueue({ table: 'products', type: 'update', id, patch: { sort_order: order } })
+    }
+  },
+
+  // Per-device view preferences (א-ב or manual order), kept with the settings.
+  setPref(patch) {
+    setState({ settings: { ...state.settings, ...patch } })
   },
 
   // ---------- fixed lists: reusable bases for the next shopping trip ----------
