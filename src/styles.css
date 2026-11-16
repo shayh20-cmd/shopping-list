@@ -10,6 +10,7 @@
   --accent-soft: #e3efe7;
   --warn: #b4440f;
   --warn-soft: #fbebdf;
+  --added-ink: #8a5a12;
   --done: #8c8f88;
   --radius: 16px;
   font-family: 'Heebo', system-ui, sans-serif;
@@ -198,3 +199,8 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; text
 .row-edit .select { height: 36px; font-size: 14px; }
 .row-edit .inline-form { margin-top: 0; }
 .row-error { font-size: 13px; color: var(--warn); }
+
+/* On a trip based on fixed lists: products added beyond them */
+.added-legend .added-tag { margin-inline-start: 0; }
+.added-tag { display: inline-block; margin-inline-start: 8px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 700; vertical-align: 2px; background: #f6e3bf; color: var(--added-ink); }
+.added-legend { display: flex; align-items: center; gap: 8px; margin: 4px 20px 0; font-size: 13px; color: var(--muted); }

@@ -54,15 +54,16 @@ function Handle({ dnd, id, name }) {
   )
 }
 
-function ItemRow({ item, dnd }) {
+// `added`: on a trip based on fixed lists, a product none of them has, marked "נוסף".
+function ItemRow({ item, dnd, added }) {
   const { products } = useStore()
   const product = item.product_id ? products.find((p) => p.id === item.product_id) : null
   const d = dnd && product ? dnd.rowProps(product.id, item.category || OTHER) : { attrs: {}, cls: '' }
   return (
-    <div className={`row ${d.cls}`} {...d.attrs}>
+    <div className={`row ${added ? 'added' : ''} ${d.cls}`} {...d.attrs}>
       <Handle dnd={dnd} id={product?.id} name={item.name} />
       <div className="row-main">
-        <span className="row-name">{item.name}</span>
+        <span className="row-name">{item.name}{added && <span className="added-tag">נוסף</span>}</span>
         {product?.barcode_name && <span className="row-meta">{product.barcode_name}</span>}
       </div>
       <ExactButton product={product} />
@@ -200,7 +201,7 @@ function BaseSheet({ list, onClose }) {
 }
 
 // "מבוסס על" for the trip: which fixed lists it came from, and what can be done with them.
-function BaseLine({ list, onAddBase }) {
+function BaseLine({ list, onAddBase, editFixed }) {
   const { lists } = useStore()
   const [open, setOpen] = useState(false)
   const [ask, setAsk] = useState(null) // { kind: 'update' | 'remove' | 'clear', base }
@@ -263,6 +264,8 @@ function BaseLine({ list, onAddBase }) {
           <div className="card base-options">
             {bases.map((b) => option(`u${b.id}`, `עדכן את "${b.name}" לפי הקנייה`, 'הרשימה הקבועה תהיה בדיוק כמו הרשימה של עכשיו',
               () => setAsk({ kind: 'update', base: b })))}
+            {bases.map((b) => option(`e${b.id}`, `ערוך את "${b.name}"`, 'הוספה ומחיקה של מוצרים ברשימה הקבועה עצמה',
+              () => editFixed(b.id)))}
             {bases.map((b) => option(`r${b.id}`, `הורד את המוצרים של "${b.name}"`, 'רק מהקנייה הזו. מה שהוספתם בעצמכם נשאר',
               () => setAsk({ kind: 'remove', base: b })))}
             {option('add', 'הוסף עוד רשימה קבועה', 'המוצרים שלה יצטרפו לקנייה', () => { setOpen(false); onAddBase() })}
@@ -334,7 +337,7 @@ function ProductAddRow({ product, list, dnd }) {
   )
 }
 
-function EditBody({ list, startAll }) {
+function EditBody({ list, startAll, editFixed }) {
   const { items, products, settings } = useStore()
   const abc = settings?.abc !== false
   // A row dropped by another row lands right there; on a category's title, last in it.
@@ -356,6 +359,12 @@ function EditBody({ list, startAll }) {
   const mine = all.filter((i) => !i.checked)
   const inCart = all.length - mine.length
   const canShowAll = list.kind === 'grocery'
+  // What the fixed lists behind this trip hold; anything else on it was added for this trip only.
+  const baseIds = list.based_on ?? []
+  const keyOf = (i) => i.product_id ?? i.name
+  const inBase = new Set(items.filter((i) => baseIds.includes(i.list_id)).map(keyOf))
+  const isAdded = (it) => baseIds.length > 0 && !inBase.has(keyOf(it))
+  const addedCount = mine.filter(isAdded).length
 
   let rows = mine
   if (showAll && canShowAll) {
@@ -371,7 +380,7 @@ function EditBody({ list, startAll }) {
 
   return (
     <>
-      <BaseLine list={list} onAddBase={() => setSheet(true)} />
+      <BaseLine list={list} onAddBase={() => setSheet(true)} editFixed={editFixed} />
       <QuickAdd list={list} />
       <div className="chips wrap">
         {canShowAll && (
@@ -385,6 +394,9 @@ function EditBody({ list, startAll }) {
         <ResetButton list={list} />
       </div>
       {drag && <OrderHint />}
+      {addedCount > 0 && (
+        <p className="added-legend"><span className="added-tag" aria-hidden="true">נוסף</span>{addedCount} מוצרים נוספו לקנייה הזו מעבר לרשימה הקבועה</p>
+      )}
       {mine.length === 0 && !showAll && (
         <div className="empty">
           הרשימה ריקה.{list.kind === 'grocery' ? ' בחרו מוצרים ב"כל המוצרים", מרשימה קבועה או בשורה למעלה.' : ' הוסיפו פריטים בשורה למעלה.'}
@@ -411,7 +423,7 @@ function EditBody({ list, startAll }) {
               <div className="card" style={title ? undefined : { marginTop: 8 }}>
                 {rows.map((it) => (it.product
                   ? <ProductAddRow key={it.id} product={it.product} list={list} dnd={drag} />
-                  : <ItemRow key={it.id} item={it} dnd={drag} />))}
+                  : <ItemRow key={it.id} item={it} dnd={drag} added={isAdded(it)} />))}
               </div>
             )}
           </section>
@@ -439,7 +451,7 @@ function untouched(list, items) {
 }
 
 // One list, two modes: edit it at home, check it off in the store.
-export default function ListScreen({ list, mode, setMode, go }) {
+export default function ListScreen({ list, mode, setMode, go, editFixed }) {
   const { items } = useStore()
   const [quick, setQuick] = useState(false)
   const [, rerender] = useState(0)
@@ -480,7 +492,7 @@ export default function ListScreen({ list, mode, setMode, go }) {
       </div>
       {mode === 'shop'
         ? <ShopBody list={list} onDone={() => setMode('edit')} go={go} />
-        : <EditBody list={list} startAll={quick && !all.length} />}
+        : <EditBody list={list} startAll={quick && !all.length} editFixed={editFixed} />}
     </>
   )
 }
