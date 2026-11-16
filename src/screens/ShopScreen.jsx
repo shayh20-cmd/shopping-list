@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore, actions } from '../lib/store'
 import { isConfigured } from '../lib/supabase'
-import { PRODUCE, categoryRank, qtyLabel } from '../data/catalog'
+import { PRODUCE, categoryRank, qtyLabel, rowSorter } from '../data/catalog'
 import Icon from '../components/Icon'
 import { QuickAdd } from './ListScreen'
 import ScanButton from '../components/BarcodeScan'
@@ -125,7 +125,10 @@ function MarketLine({ row }) {
 
 // The list in the store: check items off only. Quantities are edited in edit mode.
 export default function ShopBody({ list, onDone, go }) {
-  const { items, settings } = useStore()
+  const { items, products, settings } = useStore()
+  // The same order as the list: א-ב or the products' manual order, inside the shelf order of the categories.
+  const orderOf = new Map(products.map((p) => [p.id, p.sort_order]))
+  const order = rowSorter(settings?.abc !== false, (i) => orderOf.get(i.product_id))
   const [confirming, setConfirming] = useState(false)
   const [market, setMarket] = useState(readFlag)
   const hasHome = Boolean(settings?.home)
@@ -133,7 +136,7 @@ export default function ShopBody({ list, onDone, go }) {
 
   const mine = items
     .filter((i) => i.list_id === list.id)
-    .sort((a, b) => a.checked - b.checked || categoryRank(a.category) - categoryRank(b.category) || a.name.localeCompare(b.name, 'he'))
+    .sort((a, b) => a.checked - b.checked || categoryRank(a.category) - categoryRank(b.category) || order(a, b))
   const bought = mine.filter((i) => i.checked)
   const done = bought.length
   const pct = mine.length ? Math.round((done * 100) / mine.length) : 0

@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { useStore, actions } from '../lib/store'
 import { isConfigured } from '../lib/supabase'
-import { CATEGORIES, OTHER, PRODUCE, categoryRank, qtyLabel, stepQty, unitOf } from '../data/catalog'
+import { CATEGORIES, OTHER, PRODUCE, byName, categoryRank, qtyLabel, rowSorter, stepQty, unitOf } from '../data/catalog'
 import ShopBody from './ShopScreen'
 import { ExactButton } from '../components/ProductPicker'
 import ResetButton from '../components/ResetButton'
+import Icon from '../components/Icon'
+import useDragSort from '../lib/useDragSort'
+import { AbcChip, OrderHint } from '../components/OrderControls'
 
 export function SyncBadge() {
   const s = useStore()
@@ -30,9 +33,10 @@ function Avatars() {
   )
 }
 
-export function groupByCategory(items) {
+// By shelf order of the categories; inside each, by the given order (א-ב by default).
+export function groupByCategory(items, order = byName) {
   const groups = new Map()
-  for (const it of [...items].sort((a, b) => categoryRank(a.category) - categoryRank(b.category) || a.name.localeCompare(b.name, 'he'))) {
+  for (const it of [...items].sort((a, b) => categoryRank(a.category) - categoryRank(b.category) || order(a, b))) {
     const c = it.category || OTHER
     if (!groups.has(c)) groups.set(c, [])
     groups.get(c).push(it)
@@ -40,11 +44,23 @@ export function groupByCategory(items) {
   return [...groups.entries()]
 }
 
-function ItemRow({ item }) {
+// The drag handle of a row in manual order.
+function Handle({ dnd, id, name }) {
+  if (!dnd || !id) return null
+  return (
+    <button className="drag-handle" aria-label={`גרור את ${name}`} {...dnd.handleProps(id)}>
+      <Icon name="grip" width={3} />
+    </button>
+  )
+}
+
+function ItemRow({ item, dnd }) {
   const { products } = useStore()
   const product = item.product_id ? products.find((p) => p.id === item.product_id) : null
+  const d = dnd && product ? dnd.rowProps(product.id, item.category || OTHER) : { attrs: {}, cls: '' }
   return (
-    <div className="row">
+    <div className={`row ${d.cls}`} {...d.attrs}>
+      <Handle dnd={dnd} id={product?.id} name={item.name} />
       <div className="row-main">
         <span className="row-name">{item.name}</span>
         {product?.barcode_name && <span className="row-meta">{product.barcode_name}</span>}
@@ -304,9 +320,11 @@ function StartChoice({ list, onQuick, onPick, restart }) {
 }
 
 // A catalog product that is not on the list yet, shown when the list shows every product.
-function ProductAddRow({ product, list }) {
+function ProductAddRow({ product, list, dnd }) {
+  const d = dnd ? dnd.rowProps(product.id, product.category || OTHER) : { attrs: {}, cls: '' }
   return (
-    <div className="row not-chosen">
+    <div className={`row not-chosen ${d.cls}`} {...d.attrs}>
+      <Handle dnd={dnd} id={product.id} name={product.name} />
       <div className="row-main"><span className="row-name">{product.name}</span></div>
       <ExactButton product={product} />
       <button className="btn small" onClick={() => actions.addToList(list.id, { name: product.name, category: product.category, productId: product.id })}>
@@ -317,7 +335,14 @@ function ProductAddRow({ product, list }) {
 }
 
 function EditBody({ list, startAll }) {
-  const { items, products } = useStore()
+  const { items, products, settings } = useStore()
+  const abc = settings?.abc !== false
+  // A row dropped by another row lands right there; on a category's title, last in it.
+  const dnd = useDragSort((id, t) => actions.moveProduct(id, {
+    category: t.cat,
+    prevId: t.id && t.after ? t.id : null,
+    nextId: t.id && !t.after ? t.id : null,
+  }))
   const [sheet, setSheet] = useState(false)
   const [showAll, setShowAll] = useState(startAll)
   const [openCats, setOpenCats] = useState(() => new Set()) // categories expanded under "כל המוצרים"
@@ -338,7 +363,11 @@ function EditBody({ list, startAll }) {
     const chosen = new Set(mine.map((i) => i.product_id))
     rows = [...mine, ...products.filter((p) => !chosen.has(p.id)).map((p) => ({ ...p, product: p }))]
   }
-  const groups = list.kind === 'grocery' ? groupByCategory(rows) : [['', [...rows].sort((a, b) => a.created_at.localeCompare(b.created_at))]]
+  // The list follows the catalog's order: א-ב, or the products' manual order.
+  const orderOf = new Map(products.map((p) => [p.id, p.sort_order]))
+  const order = rowSorter(abc, (r) => (r.product ? r.product.sort_order : orderOf.get(r.product_id)))
+  const groups = list.kind === 'grocery' ? groupByCategory(rows, order) : [['', [...rows].sort((a, b) => a.created_at.localeCompare(b.created_at))]]
+  const drag = list.kind === 'grocery' && !abc ? dnd : null
 
   return (
     <>
@@ -351,9 +380,11 @@ function EditBody({ list, startAll }) {
             <button className={`chip ${showAll ? 'on' : ''}`} aria-pressed={showAll} onClick={() => setShowAll(true)}>כל המוצרים</button>
           </>
         )}
+        {canShowAll && <AbcChip abc={abc} />}
         <button className="chip ghost" onClick={() => setSheet(true)}>הוסף רשימה קבועה</button>
         <ResetButton list={list} />
       </div>
+      {drag && <OrderHint />}
       {mine.length === 0 && !showAll && (
         <div className="empty">
           הרשימה ריקה.{list.kind === 'grocery' ? ' בחרו מוצרים ב"כל המוצרים", מרשימה קבועה או בשורה למעלה.' : ' הוסיפו פריטים בשורה למעלה.'}
@@ -367,19 +398,20 @@ function EditBody({ list, startAll }) {
         return (
           <section key={title || 'all'}>
             {folding ? (
-              <button className={`cat-head ${open ? 'open' : ''}`} aria-expanded={open} onClick={() => toggleCat(title)}>
+              <button className={`cat-head ${open ? 'open' : ''} ${dnd.dropClass(title)}`} aria-expanded={open} onClick={() => toggleCat(title)}
+                data-drop-cat={drag ? title : undefined}>
                 <span className="cat-name">{title}</span>
                 <span className={`cat-count ${chosen ? 'some' : ''}`}>{chosen} מתוך {rows.length}</span>
                 <span className="cat-chevron" aria-hidden="true">‹</span>
               </button>
             ) : (
-              title && <div className="group-title">{title}</div>
+              title && <div className={`group-title ${dnd.dropClass(title)}`} data-drop-cat={drag ? title : undefined}>{title}</div>
             )}
             {open && (
               <div className="card" style={title ? undefined : { marginTop: 8 }}>
                 {rows.map((it) => (it.product
-                  ? <ProductAddRow key={it.id} product={it.product} list={list} />
-                  : <ItemRow key={it.id} item={it} />))}
+                  ? <ProductAddRow key={it.id} product={it.product} list={list} dnd={drag} />
+                  : <ItemRow key={it.id} item={it} dnd={drag} />))}
               </div>
             )}
           </section>
