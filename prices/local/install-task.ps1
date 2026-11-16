@@ -1,10 +1,10 @@
 # Sets up the price loader on this computer: a daily task at 23:00, retried at 08:00.
 # Run once from Windows PowerShell:  powershell -ExecutionPolicy Bypass -File prices\local\install-task.ps1
-# Then put the Supabase secret key in %LOCALAPPDATA%\basket-prices\loader.env.
+# Then put the Supabase secret key in %USERPROFILE%\basket-prices\loader.env.
 param([string]$Repo = (Join-Path $PSScriptRoot '..\..'))
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path $Repo).Path
-$base = Join-Path $env:LOCALAPPDATA 'basket-prices'
+$base = Join-Path $env:USERPROFILE 'basket-prices'
 New-Item -ItemType Directory -Force $base | Out-Null
 
 # The task runs a copy, so switching branches in the repo doesn't change or remove it.

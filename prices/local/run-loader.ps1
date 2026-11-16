@@ -5,7 +5,7 @@
 param([Parameter(Mandatory = $true)][string]$Repo, [string]$Extra = '')
 $dry = $Extra -match '--dry-run'
 
-$base = Join-Path $env:LOCALAPPDATA 'basket-prices'
+$base = Join-Path $env:USERPROFILE 'basket-prices'
 $work = Join-Path $base 'work'
 $logs = Join-Path $base 'logs'
 $stamp = Join-Path $base 'last-success.txt'
