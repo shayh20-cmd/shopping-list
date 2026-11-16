@@ -1,6 +1,6 @@
 # Price loader on a home computer
 
-Victory and Carrefour (with Yeinot Bitan and Quik) block GitHub's servers, so the GitHub
+Victory, Carrefour (with Yeinot Bitan and Quik) and Hazi Hinam block GitHub's servers, so the GitHub
 workflow never loads them. This folder runs the same loader (`prices/load.py` from `main`)
 on a computer in Israel, where they load.
 

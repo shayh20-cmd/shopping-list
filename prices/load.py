@@ -15,8 +15,10 @@ CHAINS = [
     "SHUFERSAL", "RAMI_LEVY", "YOHANANOF", "OSHER_AD", "VICTORY_NEW_SOURCE", "TIV_TAAM",
     "HAZI_HINAM", "YAYNO_BITAN_AND_CARREFOUR", "KESHET",
     "STOP_MARKET", "FRESH_MARKET_AND_SUPER_DOSH", "KING_STORE", "ZOL_VEBEGADOL",
-    "SUPER_YUDA", "CITY_MARKET_SHOPS", "SHUK_AHIR", "NETIV_HASED",
+    "SUPER_YUDA", "CITY_MARKET_SHOPS", "SHUK_AHIR", "NETIV_HASED", "BAREKET",
 ]
+# Chains whose stores file leaves ChainName empty.
+CHAIN_NAMES = {"7290700100008": "חצי חינם"}
 ONLINE = re.compile(r"אונליין|online|אינטרנט|משלוח|ליקוט|דיגיטל|b-?klick|pick", re.I)
 # Online stores in the price files (StoreType 2) that deliver to the Tel Aviv area, with the
 # delivery fees published by the chains (checked 2026-11-03; see README).
@@ -35,6 +37,9 @@ ONLINE_STORES = {
                           "fee_note": "דמי המשלוח מוצגים באתר"},
     "7290055700007-473": {"label": "Quik", "delivery_fee": None, "min_order": None,
                           "fee_note": "דמי המשלוח מוצגים באפליקציה"},
+    # Hazi Hinam turns GitHub's servers away too and loads only from the home computer.
+    "7290700100008-103": {"label": "חצי חינם משלוחים", "delivery_fee": None, "min_order": None,
+                          "fee_note": "דמי המשלוח מוצגים באתר"},
 }
 MAX_RADIUS_KM = 20
 MAX_STORES_PER_HOME = 40
@@ -109,7 +114,7 @@ def scrape(chains, types, regex=None, folder="dumps", limit=None):
 
 
 def chain_of(path):
-    m = re.search(r"(?:Stores|PriceFull)(\d{13})", os.path.basename(path), re.I)
+    m = re.search(r"(?:StoresFull|Stores|PriceFull)(\d{13})", os.path.basename(path), re.I)
     return m and m.group(1)
 
 
@@ -129,7 +134,7 @@ def parse_stores(paths):
             log("stores parse failed", p, e)
             continue
         top = fields(root)
-        chain_name = top.get("chainname", "")
+        chain_name = top.get("chainname") or CHAIN_NAMES.get(chain_id, "")
         for st in root.iter():
             if not isinstance(st.tag, str) or st.tag.lower() != "store":
                 continue
