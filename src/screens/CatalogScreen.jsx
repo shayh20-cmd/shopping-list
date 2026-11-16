@@ -68,7 +68,12 @@ function ProductRow({ product, item, onAdd, manage, dnd, dragCat }) {
         </>
       )}
       {!onAdd ? null : item ? (
-        <QtyStepper item={item} />
+        <>
+          <button className="icon-btn" aria-label={`הסר את ${product.name} מהרשימה`} title="הסר מהרשימה" onClick={() => actions.removeItems([item.id])}>
+            <Icon name="trash" size={18} />
+          </button>
+          <QtyStepper item={item} />
+        </>
       ) : (
         <button className="btn small" onClick={onAdd}>+ הוסף</button>
       )}
@@ -158,11 +163,11 @@ function FixedListsView({ editFixed }) {
   )
 }
 
-export default function CatalogScreen({ list, editingId, editFixed, doneEditing, go }) {
+export default function CatalogScreen({ list, editingId, startChosen, editFixed, doneEditing, go }) {
   const { products, items, lists, settings } = useStore()
   const [q, setQ] = useState('')
   const [grouped, setGrouped] = useState(true)
-  const [chosenOnly, setChosenOnly] = useState(false)
+  const [chosenOnly, setChosenOnly] = useState(!!startChosen) // opened from the list: start on what the fixed list holds
   const abc = settings?.abc !== false
   const [newCat, setNewCat] = useState(OTHER)
   const [view, setView] = useState('products') // 'products' | 'fixed'

@@ -22,6 +22,7 @@ export default function App() {
   const [listMode, setListMode] = useState('edit') // 'edit' at home, 'shop' in the store
   // A fixed list being edited in the catalog; null means the catalog adds to the next trip.
   const [editingFixed, setEditingFixed] = useState(null)
+  const [fixedFromList, setFixedFromList] = useState(false) // opened from the list: "סיום" goes back there
   const screenRef = useRef(null)
   const [showTop, setShowTop] = useState(false)
 
@@ -36,9 +37,15 @@ export default function App() {
     setEditingFixed(null)
     setTab(t)
   }
-  const editFixed = (id) => {
+  const editFixed = (id, fromList = false) => {
     setEditingFixed(id)
+    setFixedFromList(fromList)
     setTab('catalog')
+  }
+  const doneEditing = () => {
+    setEditingFixed(null)
+    if (fixedFromList) setTab('list')
+    setFixedFromList(false)
   }
   // Purchase history is reached from the list's shop mode.
   const active = tab === 'purchases' ? 'list' : tab
@@ -53,9 +60,9 @@ export default function App() {
       )}
       <main ref={screenRef} className={`screen ${tab === 'list' && listMode === 'shop' ? 'shop' : ''}`}
         onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 400)}>
-        {tab === 'list' && <ListScreen list={list} mode={listMode} setMode={setListMode} go={go} />}
+        {tab === 'list' && <ListScreen list={list} mode={listMode} setMode={setListMode} go={go} editFixed={(id) => editFixed(id, true)} />}
         {tab === 'catalog' && (
-          <CatalogScreen list={list} editingId={editingFixed} editFixed={editFixed} doneEditing={() => setEditingFixed(null)} go={go} />
+          <CatalogScreen list={list} editingId={editingFixed} startChosen={fixedFromList} editFixed={editFixed} doneEditing={doneEditing} go={go} />
         )}
         {tab === 'compare' && <CompareScreen list={list} go={go} />}
         {tab === 'settings' && <SettingsScreen />}
