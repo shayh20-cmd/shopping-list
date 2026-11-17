@@ -486,10 +486,18 @@ export const actions = {
   },
 
   // One row per (store in range, list item), computed by the basket_lines SQL function.
+  // One row per (store, item) runs to thousands, and the server returns at most 1000 per request,
+  // so read it in ordered pages; a cut-off answer left each store with only a few of the items.
   async basketLines() {
-    const { data, error } = await supabase.rpc('basket_lines', { hh: state.household.id })
-    if (error) throw error
-    return data
+    const PAGE = 1000
+    const rows = []
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase.rpc('basket_lines', { hh: state.household.id })
+        .order('store_key').order('item_id').range(from, from + PAGE - 1)
+      if (error) throw error
+      rows.push(...data)
+      if (data.length < PAGE) return rows
+    }
   },
 
   // One scanned barcode: the item, and its price at every loaded store (physical ones carry coordinates).
