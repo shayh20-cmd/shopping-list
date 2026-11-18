@@ -14,64 +14,102 @@ function km(a, b) {
   return 6371 * 2 * Math.asin(Math.sqrt(h))
 }
 
+// Back camera at a resolution high enough for the thin bars of a barcode
+// (without this the browser opens 640x480, too blurry to read).
+async function openCamera() {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+  })
+  const track = stream.getVideoTracks()[0]
+  const caps = track.getCapabilities?.() ?? {}
+  const advanced = {}
+  // Keep refocusing on its own as the phone moves (Android Chrome; iPhone does this already).
+  if (caps.focusMode?.includes('continuous')) advanced.focusMode = 'continuous'
+  // A little zoom so the phone can be held further back, where the lens can focus.
+  if (caps.zoom) advanced.zoom = Math.min(caps.zoom.max, Math.max(caps.zoom.min, 2))
+  if (Object.keys(advanced).length) await track.applyConstraints({ advanced: [advanced] }).catch(() => {})
+  return { stream, track, caps }
+}
+
+// Tap on the picture: focus on that spot, where the camera supports it.
+async function focusAt(track, caps, x, y) {
+  if (!track || !caps.focusMode) return
+  const mode = caps.focusMode.includes('single-shot') ? 'single-shot' : caps.focusMode.includes('continuous') ? 'continuous' : null
+  if (!mode) return
+  const point = caps.pointsOfInterest ? { pointsOfInterest: [{ x, y }] } : {}
+  await track.applyConstraints({ advanced: [{ focusMode: mode, ...point }] }).catch(() => {})
+  if (mode === 'single-shot' && caps.focusMode.includes('continuous')) {
+    setTimeout(() => track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {}), 1500)
+  }
+}
+
 // The browser's own barcode reader where it has one (Android), otherwise ZXing (iPhone, desktop).
 async function startReader(video, onCode) {
   const native = 'BarcodeDetector' in window
     && (await window.BarcodeDetector.getSupportedFormats().catch(() => [])).includes('ean_13')
-  if (native) {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
-    video.srcObject = stream
-    await video.play()
-    const detector = new window.BarcodeDetector({ formats: FORMATS })
-    let timer
-    const tick = async () => {
-      try {
-        const [hit] = await detector.detect(video)
-        if (hit) return onCode(hit.rawValue)
-      } catch {
-        // a frame that isn't ready yet
+  const { stream, track, caps } = await openCamera()
+  const release = () => stream.getTracks().forEach((t) => t.stop())
+  try {
+    if (native) {
+      video.srcObject = stream
+      await video.play()
+      const detector = new window.BarcodeDetector({ formats: FORMATS })
+      let timer
+      let stopped = false
+      const tick = async () => {
+        if (stopped) return
+        try {
+          const [hit] = await detector.detect(video)
+          if (hit) return onCode(hit.rawValue)
+        } catch {
+          // a frame that isn't ready yet
+        }
+        timer = setTimeout(tick, 120)
       }
-      timer = setTimeout(tick, 200)
+      tick()
+      return { track, caps, stop: () => { stopped = true; clearTimeout(timer); release() } }
     }
-    tick()
-    return () => {
-      clearTimeout(timer)
-      stream.getTracks().forEach((t) => t.stop())
-    }
+    const [{ BrowserMultiFormatReader }, { BarcodeFormat, DecodeHintType }] = await Promise.all([
+      import('@zxing/browser'), import('@zxing/library'),
+    ])
+    const hints = new Map([
+      [DecodeHintType.POSSIBLE_FORMATS,
+        [BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E, BarcodeFormat.CODE_128]],
+      [DecodeHintType.TRY_HARDER, true],
+    ])
+    const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 150 })
+    let done = false
+    const controls = await reader.decodeFromStream(stream, video, (result) => {
+      if (result && !done) {
+        done = true
+        onCode(result.getText())
+      }
+    })
+    return { track, caps, stop: () => { controls.stop(); release() } }
+  } catch (e) {
+    release()
+    throw e
   }
-  const [{ BrowserMultiFormatReader }, { BarcodeFormat, DecodeHintType }] = await Promise.all([
-    import('@zxing/browser'), import('@zxing/library'),
-  ])
-  const hints = new Map([[DecodeHintType.POSSIBLE_FORMATS,
-    [BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E, BarcodeFormat.CODE_128]]])
-  const reader = new BrowserMultiFormatReader(hints)
-  let done = false
-  const controls = await reader.decodeFromConstraints({ video: { facingMode: 'environment' } }, video, (result) => {
-    if (result && !done) {
-      done = true
-      onCode(result.getText())
-    }
-  })
-  return () => controls.stop()
 }
 
 function Camera({ onCode }) {
   const video = useRef(null)
   const codeRef = useRef(onCode)
   codeRef.current = onCode
+  const cam = useRef(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    let stop = null
     let cancelled = false
     if (!navigator.mediaDevices?.getUserMedia) {
       setError('המכשיר לא מאפשר גישה למצלמה. אפשר להקליד את המספר שמתחת לברקוד.')
       return
     }
     startReader(video.current, (code) => codeRef.current(code))
-      .then((s) => {
-        if (cancelled) s()
-        else stop = s
+      .then((c) => {
+        if (cancelled) c.stop()
+        else cam.current = c
       })
       .catch((e) => {
         if (cancelled) return
@@ -81,16 +119,25 @@ function Camera({ onCode }) {
       })
     return () => {
       cancelled = true
-      stop?.()
+      cam.current?.stop()
+      cam.current = null
     }
   }, [])
 
+  const tap = (e) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    focusAt(cam.current?.track, cam.current?.caps ?? {}, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)
+  }
+
   if (error) return <div className="notice" role="alert">{error}</div>
   return (
-    <div className="scan-view">
-      <video ref={video} muted playsInline autoPlay aria-label="תמונת המצלמה" />
-      <span className="scan-frame" aria-hidden="true" />
-    </div>
+    <>
+      <div className="scan-view" onClick={tap}>
+        <video ref={video} muted playsInline autoPlay aria-label="תמונת המצלמה" />
+        <span className="scan-frame" aria-hidden="true" />
+      </div>
+      <p className="sub scan-tip">החזיקו את הטלפון כ־15–20 ס"מ מהברקוד. אם התמונה מטושטשת, הקישו עליה.</p>
+    </>
   )
 }
 
